@@ -9,78 +9,92 @@ import mongoose from 'mongoose';
 
 export class ParentChildController {
   static createLink = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const { childId, studentCode } = req.body;
-    const parentId = req.user._id;
+  const { childId, studentCode } = req.body;
+  const parentId = req.user._id;
 
-    let child;
+  let child;
 
-    if (childId) {
-      child = await User.findOne({ _id: childId, role: 'student', isDeleted: false });
-    } else if (studentCode) {
-      child = await User.findOne({ studentCode, role: 'student', isDeleted: false });
+  if (childId) {
+    child = await User.findOne({ _id: childId, role: "student", isDeleted: false }).select("name age grade studentCode");
+  } else if (studentCode) {
+    child = await User.findOne({ studentCode, role: "student", isDeleted: false }).select("name age grade studentCode");
+  } else {
+    throw new ValidationError("Either childId or studentCode is required");
+  }
+
+  if (!child) {
+    throw new NotFoundError("Student not found");
+  }
+
+  // Check if link already exists
+  const existingLink = await ParentChildLink.findOne({
+    parentId,
+    studentId: child._id,
+  });
+
+  if (existingLink) {
+    if (existingLink.status === "approved") {
+      throw new ValidationError("Link already exists and is approved");
+    } else if (existingLink.status === "pending") {
+      throw new ValidationError("Link request is already pending");
     } else {
-      throw new ValidationError('Either childId or studentCode is required');
-    }
+      // Rejected - allow new request
+      existingLink.status = "pending";
+      existingLink.requestedAt = new Date();
+      existingLink.respondedAt = undefined;
+      await existingLink.save();
 
-    if (!child) {
-      throw new NotFoundError('Student not found');
-    }
-
-    // Check if link already exists
-    const existingLink = await ParentChildLink.findOne({
-      parentId,
-      childId: child._id,
-    });
-
-    if (existingLink) {
-      if (existingLink.status === 'approved') {
-        throw new ValidationError('Link already exists and is approved');
-      } else if (existingLink.status === 'pending') {
-        throw new ValidationError('Link request is already pending');
-      } else {
-        // Rejected - allow new request
-        existingLink.status = 'pending';
-        existingLink.requestedAt = new Date();
-        existingLink.respondedAt = undefined;
-        await existingLink.save();
-
-        await NotificationService.notifyParentLinkRequest(
-          child._id as mongoose.Types.ObjectId,
-          req.user.name,
-          existingLink._id as mongoose.Types.ObjectId
-        );
-
-        return res.status(200).json({
-          success: true,
-          data: existingLink,
-          message: 'Link request sent again',
-        });
-      }
-    } else {
-      // Create new link request
-      const link = new ParentChildLink({
-        parentId,
-        childId: child._id,
-        status: 'pending',
-        requestedAt: new Date(),
-      });
-
-      await link.save();
-
-      // Notify student
       await NotificationService.notifyParentLinkRequest(
         child._id as mongoose.Types.ObjectId,
         req.user.name,
-        link._id as mongoose.Types.ObjectId
+        existingLink._id as mongoose.Types.ObjectId
       );
 
-      return res.status(201).json({
+      return res.status(200).json({
         success: true,
-        data: link,
-        message: 'Link request sent successfully',
+        data: {
+          link: existingLink,
+          student: {
+            name: child.name,
+            age: child.age,
+            studentCode: child.studentCode,
+          },
+        },
+        message: "Link request sent again",
       });
     }
-  });
+  } else {
+    // Create new link request
+    const link = new ParentChildLink({
+      parentId,
+      studentId: child._id,
+      studentCode: child.studentCode,
+      status: "pending",
+      requestedAt: new Date(),
+    });
+
+    await link.save();
+
+    await NotificationService.notifyParentLinkRequest(
+      child._id as mongoose.Types.ObjectId,
+      req.user.name,
+      link._id as mongoose.Types.ObjectId
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        link,
+        student: {
+          name: child.name,
+          age: child.age,
+          studentCode: child.studentCode,
+        },
+      },
+      message: "Link request sent successfully",
+    });
+  }
+});
 
   static getPendingLinks = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const childId = req.user._id;

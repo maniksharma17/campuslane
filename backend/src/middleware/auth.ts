@@ -12,7 +12,7 @@ export interface AuthenticatedRequest extends Request {
 
 export const requireAnyAuth = async (
   req: AuthenticatedRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ) => {
   try {

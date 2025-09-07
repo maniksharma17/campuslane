@@ -17,8 +17,8 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 246 26% 49%;
+    --primary-foreground: 52 31% 93%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
@@ -53,9 +53,6 @@
   }
 }
 
-.alt-font {
-  font-family: 'Fredoka', system-ui, -apple-system, sans-serif;
-}
 
 /* Custom animations */
 @keyframes float {

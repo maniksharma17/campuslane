@@ -1,4 +1,6 @@
+import { Admin } from '../models/Admin';
 import { Notification } from '../models/Notification';
+import { User } from '../models/User';
 import { UserRole } from '../types';
 import mongoose from 'mongoose';
 
@@ -17,21 +19,22 @@ export class NotificationService {
       return notification;
     } catch (error) {
       console.error('Failed to create notification:', error);
+      throw error;
     }
   }
 
   static async notifyTeacherSignup(teacherId: mongoose.Types.ObjectId, teacherName: string) {
-    // Notify all admins about new teacher signup
-    const admins = await mongoose.connection.db.collection('users').find({ role: 'admin' }).toArray();
+    const admins = await Admin.find().lean();
     
-    const notifications = admins.map(admin => ({
-      userId: new mongoose.Types.ObjectId(admin._id),
+    const notifications = admins.map((admin) => ({
+      userId: admin._id,
       role: 'admin' as UserRole,
       type: 'teacher_signup',
       title: 'New Teacher Registration',
       body: `${teacherName} has signed up as a teacher and is pending approval`,
       meta: { teacherId },
     }));
+    console.log(admins)
 
     if (notifications.length > 0) {
       await Notification.insertMany(notifications);
@@ -39,10 +42,10 @@ export class NotificationService {
   }
 
   static async notifyContentSubmission(contentId: mongoose.Types.ObjectId, contentTitle: string) {
-    const admins = await mongoose.connection.db.collection('users').find({ role: 'admin' }).toArray();
+    const admins = await User.find({ role: 'admin' }).lean();
     
-    const notifications = admins.map(admin => ({
-      userId: new mongoose.Types.ObjectId(admin._id),
+    const notifications = admins.map((admin) => ({
+      userId: admin._id,
       role: 'admin' as UserRole,
       type: 'content_pending',
       title: 'Content Pending Approval',
@@ -67,9 +70,10 @@ export class NotificationService {
   }
 
   static async notifyOrderStatusUpdate(userId: mongoose.Types.ObjectId, orderId: mongoose.Types.ObjectId, status: string) {
+    const user = await User.findById(userId).lean();
     await this.createNotification({
       userId,
-      role: 'parent', // Assuming parents make orders
+      role: (user?.role as UserRole) || 'parent',
       type: 'order_status',
       title: 'Order Update',
       body: `Your order status has been updated to: ${status}`,

@@ -3,7 +3,8 @@ import { ApprovalStatus } from '../types';
 
 export interface IParentChildLink extends Document {
   parentId: mongoose.Types.ObjectId;
-  childId: mongoose.Types.ObjectId;
+  studentId: mongoose.Types.ObjectId;
+  studentCode: string;
   status: ApprovalStatus;
   requestedAt: Date;
   respondedAt?: Date;
@@ -15,7 +16,8 @@ export interface IParentChildLink extends Document {
 const parentChildLinkSchema = new Schema<IParentChildLink>(
   {
     parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    childId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    studentCode: { type: String, required: true },
     status: { 
       type: String, 
       enum: ['pending', 'approved', 'rejected'], 
@@ -36,8 +38,8 @@ const parentChildLinkSchema = new Schema<IParentChildLink>(
   }
 );
 
-parentChildLinkSchema.index({ parentId: 1, childId: 1 }, { unique: true });
-parentChildLinkSchema.index({ childId: 1, status: 1 });
+parentChildLinkSchema.index({ parentId: 1, studentCode: 1 }, { unique: true });
+parentChildLinkSchema.index({ studentCode: 1, status: 1 });
 parentChildLinkSchema.index({ parentId: 1, status: 1 });
 
 export const ParentChildLink = mongoose.model<IParentChildLink>('ParentChildLink', parentChildLinkSchema);

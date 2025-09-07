@@ -1,26 +1,32 @@
-import { User, IUser } from '../models/User';
-import { verifyGoogleToken } from '../utils/google';
-import { generateStudentCode } from '../utils/generateCode';
-import { UserRole } from '../types';
-import { NotificationService } from './NotificationService';
+import { User, IUser } from "../models/User";
+import { generateStudentCode } from "../utils/generateCode";
+import { UserRole } from "../types";
+import { NotificationService } from "./NotificationService";
+import mongoose from "mongoose";
+import axios from "axios";
 
 export class UserService {
   static async findOrCreateFromGoogle(
-    idToken: string,
+    name: string,
+    token: string,   // now access_token
+    phone?: string,
+    city?: string,
+    state?: string,
+    country?: string,
+    pincode?: string,
     role?: UserRole,
     age?: number
   ): Promise<IUser> {
-    const googleUser = await verifyGoogleToken(idToken);
+    // Use access_token to fetch profile
+    const { data: googleUser } = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-    let user = await User.findOne({ 
-      $or: [
-        { email: googleUser.email },
-        { googleId: googleUser.sub }
-      ]
+    let user = await User.findOne({
+      $or: [{ email: googleUser.email }, { googleId: googleUser.sub }],
     });
 
     if (user) {
-      // Update Google ID if not set
       if (!user.googleId) {
         user.googleId = googleUser.sub;
         await user.save();
@@ -28,16 +34,19 @@ export class UserService {
       return user;
     }
 
-    // Create new user
     const userData: Partial<IUser> = {
-      name: googleUser.name,
+      name,
       email: googleUser.email,
       googleId: googleUser.sub,
-      avatar: googleUser.picture,
-      role: role || 'student',
+      phone,
+      pincode,
+      city,
+      state,
+      country,
+      role: role || "student",
     };
 
-    if (role === 'student' && age) {
+    if (role === "student" && age) {
       userData.age = age;
       userData.studentCode = generateStudentCode();
     }
@@ -45,10 +54,9 @@ export class UserService {
     user = new User(userData);
     await user.save();
 
-    // Notify admins if new teacher
-    if (role === 'teacher') {
+    if (role === "teacher") {
       await NotificationService.notifyTeacherSignup(
-        new (require('mongoose').Types.ObjectId)(user._id),
+        user._id as mongoose.Types.ObjectId,
         user.name
       );
     }
@@ -60,7 +68,10 @@ export class UserService {
     return User.findById(userId);
   }
 
-  static async updateProfile(userId: string, updates: Partial<IUser>): Promise<IUser | null> {
+  static async updateProfile(
+    userId: string,
+    updates: Partial<IUser>
+  ): Promise<IUser | null> {
     // Remove fields that shouldn't be updated directly
     const allowedUpdates = { ...updates };
     delete allowedUpdates.email;
