@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Notification } from '../models/Notification';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -9,7 +9,7 @@ export class NotificationController {
   static getNotifications = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { page, limit } = req.query as any;
     const { skip } = getPaginationParams(req.query);
-    const userId = req.user._id;
+    const userId = req.admin._id;
 
     const filter = { 
       userId, 
@@ -34,7 +34,7 @@ export class NotificationController {
 
   static markAsRead = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const userId = req.user._id;
+    const userId = req.admin._id;
 
     const notification = await Notification.findOneAndUpdate(
       { _id: id, userId, isDeleted: false },
@@ -54,7 +54,7 @@ export class NotificationController {
 
   static deleteNotification = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const userId = req.user._id;
+    const userId = req.admin._id;
 
     const notification = await Notification.findOneAndUpdate(
       { _id: id, userId, isDeleted: false },

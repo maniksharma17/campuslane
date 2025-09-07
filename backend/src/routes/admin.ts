@@ -12,8 +12,9 @@ const router = Router();
 router.get('/teachers', requireAdminAuth, validateQuery(paginationSchema.extend({
   status: z.enum(['pending', 'approved', 'rejected']).optional(),
 })), AdminController.getTeachers);
-router.patch('/teachers/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.updateStudent);
-router.delete('/teachers/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.deleteStudent);
+router.get('/teachers/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.getTeacherById);
+router.patch('/teachers/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.updateTeacher);
+router.delete('/teachers/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.deleteTeacher);
 
 router.patch('/teachers/:id/approve', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.approveTeacher);
 router.patch('/teachers/:id/reject', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.rejectTeacher);

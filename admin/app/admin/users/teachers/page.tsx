@@ -69,15 +69,6 @@ export default function TeachersPage() {
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">Teachers</h1>
-          <Button
-            onClick={() => {
-              setModalMode("add");
-              setSelectedTeacher(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" /> Add Teacher
-          </Button>
         </div>
 
         <DataTable<Teacher>
@@ -107,7 +98,7 @@ export default function TeachersPage() {
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={() => router.push(`/admin/teachers/${item._id}`)}
+                    onClick={() => router.push(`/admin/users/teachers/detail?teacherId=${item._id}`)}
                     title="View"
                   >
                     View

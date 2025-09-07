@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Avatar,
@@ -43,6 +43,7 @@ export function Topbar() {
   };
 
   const breadcrumbs = generateBreadcrumbs();
+  const router = useRouter();
 
   return (
     <div className="absolute left-0 top-0 right-0 flex h-16 items-center justify-between border-b bg-card px-6 shadow-sm">
@@ -73,6 +74,9 @@ export function Topbar() {
           variant="ghost"
           size="icon"
           className="relative h-10 w-10 rounded-full"
+          onClick={()=>{
+            router.push("/admin/notifications")
+          }}
         >
           <Bell className="h-5 w-5" />
           {/* Example notification dot */}

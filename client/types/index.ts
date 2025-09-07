@@ -6,6 +6,8 @@ export interface User {
   name: string;
   email: string;
   age?: number;
+  classLevel?: mongoose.Types.ObjectId;
+  classOther?: string;
   role: 'student' | 'parent' | 'teacher';
   pinCode: string;
   city: string;

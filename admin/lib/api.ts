@@ -121,6 +121,9 @@ export const usersApi = {
   getTeachers: (params?: { approvalStatus?: string; page?: number; limit?: number; search?: string }) =>
     api.get('/admin/teachers', { params }),
 
+  getTeacherById: (id: string) =>
+    api.get(`/admin/teachers/${id}`),
+
   updateTeacher: (id: string, data: any) =>
     api.patch(`/admin/teachers/${id}`, data),
 
@@ -219,8 +222,8 @@ export const ecommerceApi = {
 
 // Notifications API
 export const notificationsApi = {
-  getNotifications: (params?: { page?: number; limit?: number }) =>
-    api.get('/admin/notifications', { params }),
+  getNotifications: (params?: { page?: number; limit?: number; search?: string; type?: string }) =>
+    api.get('/notifications', { params }),
   
   markAsRead: (id: string) =>
     api.patch(`/notifications/${id}/read`),

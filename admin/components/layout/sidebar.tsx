@@ -18,6 +18,7 @@ import {
   Building2,
   UserCheck,
   UserCog,
+  CircleCheckBig,
 } from 'lucide-react';
 
 interface NavItem {
@@ -49,7 +50,7 @@ const navigationItems: NavItem[] = [
       { title: 'Products', href: '/admin/ecommerce/products', icon: Package },
       { title: 'Categories', href: '/admin/ecommerce/categories', icon: FolderOpen },
       { title: 'Orders', href: '/admin/ecommerce/orders', icon: ShoppingBag },
-      { title: 'Schools', href: '/admin/ecommerce/schools', icon: Building2 },
+      // { title: 'Schools', href: '/admin/ecommerce/schools', icon: Building2 },
     ],
   },
   {
@@ -58,6 +59,7 @@ const navigationItems: NavItem[] = [
     items: [
       { title: 'Students', href: '/admin/users/students', icon: UserCheck },
       { title: 'Teachers', href: '/admin/users/teachers', icon: UserCog },
+      { title: 'Teacher Approval', href: '/admin/users/notifications', icon: CircleCheckBig },
     ],
   },
   // {

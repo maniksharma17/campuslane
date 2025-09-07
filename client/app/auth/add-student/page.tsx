@@ -85,9 +85,9 @@ export default function ParentPage() {
 
         {/* Student list */}
         {students.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-800">
-              Linked Students
+          <div className="space-y-2">
+            <h2 className="text-lg font-medium text-green-600">
+              Request Sent
             </h2>
             <ul className="space-y-3">
               {students.map((student, i) => (
@@ -115,7 +115,7 @@ export default function ParentPage() {
         <div className="flex justify-between items-center pt-4">
           {/* Skip */}
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.replace("/explore")}
             className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition"
           >
             Skip for now <span className="text-lg">→</span>
@@ -123,7 +123,7 @@ export default function ParentPage() {
 
           {/* Finish */}
           <Button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.replace("/explore")}
             className="px-6 py-3 bg-primary text-white"
           >
             Finish

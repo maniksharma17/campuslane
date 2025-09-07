@@ -2,22 +2,24 @@ import { User, IUser } from "../models/User";
 import { generateStudentCode } from "../utils/generateCode";
 import { UserRole } from "../types";
 import { NotificationService } from "./NotificationService";
-import mongoose from "mongoose";
+import { Types } from "mongoose";
 import axios from "axios";
 
 export class UserService {
   static async findOrCreateFromGoogle(
     name: string,
-    token: string,   // now access_token
+    token: string,
     phone?: string,
     city?: string,
     state?: string,
     country?: string,
     pincode?: string,
     role?: UserRole,
-    age?: number
+    age?: number,
+    classLevel?: Types.ObjectId,  
+    classOther?: string,
   ): Promise<IUser> {
-    // Use access_token to fetch profile
+    // Use id_token to fetch profile
     const { data: googleUser } = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -46,9 +48,19 @@ export class UserService {
       role: role || "student",
     };
 
-    if (role === "student" && age) {
-      userData.age = age;
-      userData.studentCode = generateStudentCode();
+    if (role === "student") {
+      if (age) {
+        userData.age = age;
+        userData.studentCode = generateStudentCode();
+      }
+
+      if (classLevel) {
+        userData.classLevel = classLevel;
+      }
+
+      if (classOther) {
+        userData.classOther = classOther;
+      }
     }
 
     user = new User(userData);
@@ -56,7 +68,7 @@ export class UserService {
 
     if (role === "teacher") {
       await NotificationService.notifyTeacherSignup(
-        user._id as mongoose.Types.ObjectId,
+        user._id as Types.ObjectId,
         user.name
       );
     }

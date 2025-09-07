@@ -10,11 +10,12 @@ export interface IUser extends Document {
   country?: string;
   pincode?: string;
   role: UserRole;
-  avatar?: string;
   googleId?: string;
-  age?: number; // Only for students
-  studentCode?: string; // Only for students
-  approvalStatus?: ApprovalStatus; // Only for teachers
+  age?: number; 
+  classLevel?: mongoose.Types.ObjectId;
+  classOther?: string;
+  studentCode?: string; 
+  approvalStatus?: ApprovalStatus; 
   isDeleted?: boolean;
   deletedAt?: Date;
   deletedBy?: mongoose.Types.ObjectId;
@@ -43,6 +44,13 @@ const userSchema = new Schema<IUser>(
     age: { 
       type: Number, 
       required: function(this: IUser) { return this.role === 'student'; }
+    },
+    classLevel: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "Class",
+    },
+    classOther: { 
+      type: String, 
     },
     studentCode: { 
       type: String, 

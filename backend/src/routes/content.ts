@@ -18,7 +18,7 @@ import { mongoIdSchema, paginationSchema } from '../validators/common';
 const router = Router();
 
 // Classes
-router.get('/classes', requireAnyAuth, ContentController.getClasses);
+router.get('/classes', ContentController.getClasses);
 router.post('/classes', requireAdminAuth, validateBody(createClassSchema), ContentController.createClass);
 router.patch('/classes/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), validateBody(updateClassSchema), ContentController.updateClass);
 router.delete('/classes/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), ContentController.deleteClass);

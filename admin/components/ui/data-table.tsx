@@ -39,6 +39,7 @@ interface DataTableProps<T = any> {
   onSelectionChange?: (items: string[]) => void;
   actions?: React.ReactNode;
   emptyMessage?: string;
+  rowClassName?: (item: T) => string; 
 }
 
 export function DataTable<T extends { _id: string }>({
@@ -56,6 +57,7 @@ export function DataTable<T extends { _id: string }>({
   onSelectionChange,
   actions,
   emptyMessage = 'No data found.',
+  rowClassName
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<Record<string, string>>({});

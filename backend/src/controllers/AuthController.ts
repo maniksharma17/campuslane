@@ -5,10 +5,11 @@ import { generateToken, generateAdminToken } from "../utils/jwt";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthenticationError } from "../utils/errors";
 import { UserRole } from "../types";
+import mongoose from "mongoose";
 
 export class AuthController {
   static googleSignIn = asyncHandler(async (req: Request, res: Response) => {
-    const { idToken, role, name, phone, city, state, country, pincode, age } =
+    const { idToken, role, name, phone, city, state, country, pincode, age, classLevel, classOther } =
       req.body;
 
     const user = (await UserService.findOrCreateFromGoogle(
@@ -20,7 +21,9 @@ export class AuthController {
       country,
       pincode,
       role as UserRole,
-      age
+      age,
+      classLevel as mongoose.Types.ObjectId,
+      classOther
     )) as {
       name: string;
       _id: string | { toString(): string };
@@ -30,6 +33,8 @@ export class AuthController {
       state: string;
       country: string;
       pincode: string;
+      classLevel?: mongoose.Types.ObjectId,
+      classOther?: string
     };
 
     const token = generateToken({

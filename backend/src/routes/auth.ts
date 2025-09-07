@@ -33,7 +33,7 @@ const router = Router();
  *       200:
  *         description: Authentication successful
  */
-router.post('/google', authLimiter, validateBody(googleSignInSchema), AuthController.googleSignIn);
+router.post('/google', authLimiter, AuthController.googleSignIn);
 
 /**
  * @swagger

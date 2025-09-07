@@ -28,9 +28,8 @@ export interface Teacher {
   pincode?: string;
   role?: "teacher";
   approvalStatus?: "pending" | "approved" | "rejected";
-  avatar?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface TeacherModalProps {
@@ -111,7 +110,6 @@ export default function TeacherModal({
       const finalData: Partial<Teacher> = {
         ...formData,
         role: "teacher",
-        avatar: uploadedAvatarKey || formData.avatar,
       };
 
       await onSubmit(finalData);

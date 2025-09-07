@@ -46,6 +46,23 @@ export class AdminController {
     }
   );
 
+  static getTeacherById = asyncHandler(
+      async (req: AuthenticatedRequest, res: Response) => {
+        const { id } = req.params;
+  
+        const teacher = await User.findById(id);
+  
+        if (!teacher) {
+          throw new NotFoundError("Teacher not found");
+        }
+  
+        res.status(200).json({
+          success: true,
+          data: teacher,
+        });
+      }
+    );
+
   static updateTeacher = asyncHandler(
       async (req: AuthenticatedRequest, res: Response) => {
         const { id } = req.params;
