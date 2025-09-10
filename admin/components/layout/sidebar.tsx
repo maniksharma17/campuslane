@@ -41,6 +41,7 @@ const navigationItems: NavItem[] = [
     icon: GraduationCap,
     items: [
       { title: 'Content', href: '/admin/education/classes', icon: FileText },
+      { title: 'Content Approval', href: '/admin/education/approvals', icon: CircleCheckBig },
     ],
   },
   {

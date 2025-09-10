@@ -82,17 +82,10 @@ router.get(
  * Parent can view child's progress
  */
 router.get(
-  '/child/:childId',
+  '/child/:studentId',
   requireAuth,
   requireRole('parent'),
-  validateParams(z.object({ childId: mongoIdSchema })),
-  validateQuery(
-    paginationSchema.extend({
-      classId: mongoIdSchema.optional(),
-      subjectId: mongoIdSchema.optional(),
-      status: z.enum(['not_started', 'in_progress', 'completed']).optional(),
-    })
-  ),
+  validateParams(z.object({ studentId: mongoIdSchema })),
   ProgressController.getChildProgress
 );
 

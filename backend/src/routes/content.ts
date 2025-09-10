@@ -44,12 +44,22 @@ router.get('/content', requireAnyAuth, validateQuery(paginationSchema.extend({
   approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
 })), ContentController.getContent);
 
+// For teacher dashboard
+router.get('/teacher/content', requireAnyAuth, validateQuery(paginationSchema.extend({
+  classId: mongoIdSchema.optional(),
+  subjectId: mongoIdSchema.optional(),
+  chapterId: mongoIdSchema.optional(),
+  type: z.enum(['file', 'video', 'quiz', 'game', 'image']).optional(),
+  approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
+  uploaderId: mongoIdSchema.optional(),
+})), ContentController.getTeacherContent);
+
 router.get('/content/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), ContentController.getContentById);
 
 router.post('/content', requireAnyAuth, validateBody(createContentSchema), ContentController.createContent);
 
-router.patch('/content/:id', requireAnyAuth, requireTeacherApproval, validateParams(z.object({ id: mongoIdSchema })), validateBody(updateContentSchema), ContentController.updateContent);
+router.patch('/content/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), validateBody(updateContentSchema), ContentController.updateContent);
 
-router.delete('/content/:id', requireAnyAuth, requireTeacherApproval, validateParams(z.object({ id: mongoIdSchema })), ContentController.deleteContent);
+router.delete('/content/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), ContentController.deleteContent);
 
 export default router;

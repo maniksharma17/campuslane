@@ -42,9 +42,10 @@ const progressSchema = new Schema<IProgress>(
     quizScore: { type: Number, min: 0, max: 100 },
     completedAt: Date,
     contentSnapshot: {
-      title: String,
-      type: String,
-      duration: Number,
+      title: {type: String},
+      type: {type: String},
+      duration: {type: Number},
+      s3key: {type: String},
     },
   },
   { timestamps: true }

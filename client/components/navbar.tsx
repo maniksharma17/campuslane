@@ -81,7 +81,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:py-1">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/explore" className="flex items-center">
             <Image
               src={"/logos/FULL LOGO HORIZONTAL COLOR.png"}
               width={200}
@@ -160,7 +160,7 @@ export default function Navbar() {
                       </p>
                     </Link>
                     {user?.role === "teacher" && (
-                      <Link href="/dashboard">
+                      <Link href="/dashboard/classes">
                         <p className="block px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50">
                           Dashboard
                         </p>

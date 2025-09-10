@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Navbar from "@/components/navbar";
 import ContentGrid from "@/components/content/ContentGrid";
 import api from "@/lib/api"; // works in both client + server
+import ThreeDotsSpinner from "@/components/ui/spinner";
 
 type ContentItem = {
   _id: string;
@@ -38,10 +39,10 @@ export default function ExplorePage() {
   return (
     <main className="min-h-screen bg-primary/10 pt-20">
       <Navbar />
-      <div className="max-w-full lg:px-20 mx-auto px-4 sm:px-6 px-8 py-8">
+      <div className="max-w-full lg:px-20 mx-auto sm:px-6 px-8 py-8">
 
         {loading ? (
-          <p>Loading...</p>
+          <ThreeDotsSpinner color="blue" />
         ) : (
           <ContentGrid contents={contents} />
         )}

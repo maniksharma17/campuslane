@@ -98,11 +98,19 @@ export class ParentChildController {
 
   static getPendingLinks = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const studentId = req.user._id;
-
-    const links = await ParentChildLink.find({
+    
+    let links = await ParentChildLink.find({
       studentId,
       status: 'pending',
     }).populate('parentId', 'name email phone');
+
+    if(links.length === 0) {
+      const parentId = req.user._id;
+      links = await ParentChildLink.find({
+      parentId,
+      status: 'pending',
+    }).populate('studentId', 'name email phone');
+    }
 
     res.status(200).json({
       success: true,
@@ -137,11 +145,11 @@ export class ParentChildController {
 
   static rejectLink = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const childId = req.user._id;
+    const studentId = req.user._id;
 
     const link = await ParentChildLink.findOne({
       _id: id,
-      childId,
+      studentId,
       status: 'pending',
     });
 
@@ -162,11 +170,9 @@ export class ParentChildController {
 
   static deleteLink = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const childId = req.user._id;
 
     const link = await ParentChildLink.findOneAndDelete({
       _id: id,
-      childId,
     });
 
     if (!link) {
@@ -185,7 +191,7 @@ export class ParentChildController {
     const links = await ParentChildLink.find({
       parentId,
       status: 'approved',
-    }).populate('childId', 'name email age studentCode');
+    }).populate('studentId', 'name email age studentCode');
 
     res.status(200).json({
       success: true,

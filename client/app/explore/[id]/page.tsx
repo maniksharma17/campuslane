@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download, Play } from "lucide-react";
+import Image from "next/image";
 
 type ContentItem = {
   _id: string;
@@ -59,6 +60,21 @@ export default function ContentPage() {
   };
 
   // 1️⃣ Fetch content & mark open (open returns progress object)
+
+  const [otherContent, setOtherContent] = useState<ContentItem[]>([]);
+
+  useEffect(() => {
+    async function fetchOther() {
+      try {
+        const res = await api.get("/content");
+        setOtherContent(res.data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch other content", err);
+      }
+    }
+    fetchOther();
+  }, []);
+
   useEffect(() => {
     let mounted = true;
     async function fetchContent() {
@@ -96,7 +112,8 @@ export default function ContentPage() {
     if (!video || !content) return;
 
     // If we have a server-side lastWatchedSecond, prefer it when starting
-    const startingPoint = progress?.lastWatchedSecond ?? Math.floor(video.currentTime || 0);
+    const startingPoint =
+      progress?.lastWatchedSecond ?? Math.floor(video.currentTime || 0);
     lastPingRef.current = Math.floor(startingPoint);
 
     // clear previous interval if any
@@ -170,7 +187,9 @@ export default function ContentPage() {
     await stopPingInterval();
     if (!content) return;
     try {
-      const res = await api.post("/progress/complete", { contentId: content._id });
+      const res = await api.post("/progress/complete", {
+        contentId: content._id,
+      });
       if (res?.data?.data) {
         setProgress(res.data.data);
         setIsCompleted(res.data.data.status === "completed");
@@ -210,8 +229,13 @@ export default function ContentPage() {
         // sendBeacon only sends payload and cookies — it won't include Authorization headers.
         // It's a best-effort fallback; server should accept cookie or anonymous pings if possible.
         if (navigator.sendBeacon) {
-          const payload = JSON.stringify({ contentId: content._id, secondsSinceLastPing: elapsed });
-          const url = `${process.env.NEXT_PUBLIC_API_BASE_URL || ""}/progress/video/ping`;
+          const payload = JSON.stringify({
+            contentId: content._id,
+            secondsSinceLastPing: elapsed,
+          });
+          const url = `${
+            process.env.NEXT_PUBLIC_API_BASE_URL || ""
+          }/progress/video/ping`;
           navigator.sendBeacon(url, payload);
         }
       } catch {
@@ -226,7 +250,9 @@ export default function ContentPage() {
   const handleMarkComplete = async () => {
     if (!content) return;
     try {
-      const res = await api.post("/progress/complete", { contentId: content._id });
+      const res = await api.post("/progress/complete", {
+        contentId: content._id,
+      });
       if (res?.data?.data) {
         setProgress(res.data.data);
         setIsCompleted(res.data.data.status === "completed");
@@ -259,7 +285,10 @@ export default function ContentPage() {
   };
 
   // UI: progress bar width
-  const progressPercent = Math.min(100, Math.max(0, progress?.progressPercent ?? 0));
+  const progressPercent = Math.min(
+    100,
+    Math.max(0, progress?.progressPercent ?? 0)
+  );
   const timeSpent = progress?.timeSpent ?? 0;
   const lastWatched = progress?.lastWatchedSecond ?? 0;
 
@@ -280,113 +309,159 @@ export default function ContentPage() {
   }
 
   return (
-    <main className="min-h-screen bg-primary/20 pt-20">
-      <Navbar />
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Button className="mb-2" onClick={() => router.back()}>
-          <ArrowLeft size={16} className="mr-2" />
+    <main className="min-h-screen bg-primary/10 pt-20">
+  <Navbar />
+  <div className="max-w-full lg:px-20 mx-auto px-4 sm:px-6 py-10">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      
+      {/* Left: Content */}
+      <div className="lg:col-span-2">
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft size={18} />
           Back
         </Button>
 
-        <h1 className="text-3xl font-semibold mb-4">{content.title}</h1>
-        {content.description && (
-          <p className="text-lg text-gray-700 mb-6">{content.description}</p>
-        )}
+        {/* Content header */}
+        <div className="flex flex-row justify-between rounded-xl border bg-gray-50 shadow p-6 mb-6">
+          <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-3">
+            {content.title}
+          </h1>
+          {content.description && (
+            <p className="text-gray-700 mb-5">{content.description}</p>
+          )}
 
-        {/* Progress bar & stats */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium">Progress</div>
-            <div className="text-sm text-gray-600">{progressPercent}%</div>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-2">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={handleDownload}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm"
+            >
+              <Download size={16} /> Download
+            </Button>
 
-          <div className="text-sm text-gray-600 flex gap-4">
-            <div>Time spent: {secondsToHms(timeSpent)}</div>
-            <div>Last watched: {secondsToHms(lastWatched)}</div>
-            {progress?.completedAt && (
-              <div>Completed: {new Date(progress.completedAt).toLocaleString()}</div>
+            {content.type !== "video" && !isCompleted && (
+              <Button
+                onClick={handleMarkComplete}
+                className="py-2 rounded-lg"
+              >
+                Mark as Completed
+              </Button>
+            )}
+
+            {isCompleted && (
+              <span className="flex items-center gap-2 text-green-700 font-semibold">
+                ✅ Completed
+              </span>
             )}
           </div>
         </div>
 
-        <div className="mb-6">
-          {content.type === "video" && content.s3Key && (
-            <div>
-              <video
-                ref={videoRef}
-                controls
-                playsInline
-                className="w-full rounded-lg shadow-lg"
-                onPlay={startPingInterval}
-                onPause={stopPingInterval}
-                onEnded={handleVideoEnd}
-                onLoadedMetadata={handleLoadedMetadata}
-              >
-                <source
-                  src={`${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${content.s3Key}`}
-                  type="video/mp4"
-                />
-                Your browser does not support the video tag.
-              </video>
-
-              <div className="mt-3 flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const v = videoRef.current;
-                    if (!v) return;
-                    try {
-                      v.currentTime = lastWatched;
-                      v.focus();
-                    } catch (e) {
-                      /* ignore */
-                    }
-                  }}
-                >
-                  Resume
-                </Button>
-
-                <div className="text-sm text-gray-600">{pinging ? "Saving..." : ""}</div>
-              </div>
+        {/* Progress bar (videos only) */}
+        {content.type === "video" && (
+          <div className="rounded-xl border bg-gray-50 shadow p-6 mb-6">
+            <div className="flex items-center justify-between mb-2 text-sm font-medium">
+              <span>Progress</span>
+              <span>{progressPercent.toPrecision(2)}%</span>
             </div>
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Content Viewer */}
+        <div>
+          {content.type === "video" && content.s3Key && (
+            <video
+              ref={videoRef}
+              controls
+              playsInline
+              className="w-full rounded-xl"
+              onPlay={startPingInterval}
+              onPause={stopPingInterval}
+              onEnded={handleVideoEnd}
+              onLoadedMetadata={handleLoadedMetadata}
+            >
+              <source
+                src={`${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${content.s3Key}`}
+                type="video/mp4"
+              />
+            </video>
           )}
 
           {content.type === "file" && content.s3Key && (
             <iframe
               src={`${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${content.s3Key}`}
-              className="w-full h-[80vh] border rounded-lg"
+              className="w-full h-[80vh] border-0"
             />
           )}
 
-          {content.type !== "video" && content.type !== "file" && (
-            <p>Preview not available. Please download the file.</p>
-          )}
-        </div>
-
-        <div className="flex gap-4 items-center">
-          <Button variant="outline" onClick={handleDownload}>
-            Download
-          </Button>
-
-          {content.type !== "video" && !isCompleted && (
-            <Button onClick={handleMarkComplete}>Mark as Completed</Button>
+          {content.type === "image" && content.s3Key && (
+            <Image
+              alt={content.title}
+              width={400}
+              height={400}
+              src={`${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${content.s3Key}`}
+              className="w-full border-0 rounded-xl"
+            />
           )}
 
-          {isCompleted && (
-            <span className="text-green-600 font-medium">✅ Completed</span>
-          )}
-
-          {progress?.quizScore != null && (
-            <div className="text-sm text-gray-700">Quiz: {progress.quizScore}%</div>
+          {content.type !== "video" && content.type !== "file" && content.type !== "image" && (
+            <div className="p-6 text-gray-600">
+              Preview not available. Please download the file.
+            </div>
           )}
         </div>
       </div>
-    </main>
+
+      {/* Right: Other Content */}
+      <div>
+        <h2 className="text-xl font-medium mb-4">Other Content</h2>
+        <div className="space-y-3">
+          {otherContent.map((item) => (
+            <div
+              key={item._id}
+              onClick={() => router.push(`/content/${item._id}`)}
+              className="flex items-center justify-between rounded-xl border bg-gray-50 shadow p-6 mb-6 hover:bg-gray-50 transition cursor-pointer"
+            >
+              <div className="flex items-center gap-3 overflow-hidden">
+                {item.thumbnailKey && (
+                  <Image
+                    width={60}
+                    height={60}
+                    src={`${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${item.thumbnailKey}`}
+                    alt={item.title}
+                    className="h-14 w-14 rounded object-cover flex-shrink-0"
+                  />
+                )}
+                <p className="font-medium text-gray-800 line-clamp-1">
+                  {item.title}
+                </p>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/content/${item._id}`);
+                }}
+                className="flex items-center justify-center h-9 w-9 rounded-full bg-primary text-white hover:bg-primary/90 transition"
+              >
+                <Play size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
   );
 }
