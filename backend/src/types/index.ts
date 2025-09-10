@@ -15,7 +15,7 @@ export type UserRole = 'student' | 'teacher' | 'parent' | 'admin';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
-export type ContentType = 'file' | 'video' | 'quiz' | 'game';
+export type ContentType = 'file' | 'video' | 'quiz' | 'game' | 'image';
 
 export type ProgressStatus = 'not_started' | 'in_progress' | 'completed';
 

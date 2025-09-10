@@ -16,7 +16,7 @@ export const validateBody = (schema: ZodSchema) => {
 };
 
 export const validateQuery = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
       const validated = schema.parse(req.query);
       req.query = validated;

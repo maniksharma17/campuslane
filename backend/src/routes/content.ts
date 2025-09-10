@@ -40,7 +40,7 @@ router.get('/content', requireAnyAuth, validateQuery(paginationSchema.extend({
   classId: mongoIdSchema.optional(),
   subjectId: mongoIdSchema.optional(),
   chapterId: mongoIdSchema.optional(),
-  type: z.enum(['file', 'video', 'quiz', 'game']).optional(),
+  type: z.enum(['file', 'video', 'quiz', 'game', 'image']).optional(),
   approvalStatus: z.enum(['pending', 'approved', 'rejected']).optional(),
 })), ContentController.getContent);
 

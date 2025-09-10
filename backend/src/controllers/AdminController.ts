@@ -275,6 +275,19 @@ export class AdminController {
     }
   );
 
+  static getStudentById = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const {id} = req.params;
+
+      const student = await User.findById(id);
+
+      res.status(200).json({
+        success: true,
+        data: student
+      });
+    }
+  );
+
   static updateStudent = asyncHandler(
       async (req: AuthenticatedRequest, res: Response) => {
         const { id } = req.params;

@@ -69,6 +69,41 @@ export default function CommonModal({
     thumbnail?: number;
     file?: number;
   }>({});
+  const [fileSize, setFileSize] = useState<number | null>(null);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [detectedType, setDetectedType] = useState<"file" | "video" | "image" | null>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const selectedFile = e.target.files?.[0] || null;
+  setFile(selectedFile);
+
+  if (!selectedFile) {
+    setFileSize(null);
+    setDuration(null);
+    setDetectedType(null);
+    return;
+  }
+
+  setFileSize(selectedFile.size);
+
+  if (selectedFile.type.startsWith("video/")) {
+    setDetectedType("video");
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.src = URL.createObjectURL(selectedFile);
+    video.onloadedmetadata = () => {
+      setDuration(video.duration);
+      URL.revokeObjectURL(video.src);
+    };
+  } else if (selectedFile.type.startsWith("image/")) {
+    setDetectedType("image");
+    setDuration(null);
+  } else {
+    setDetectedType("file"); // default for PDFs, docs, etc.
+    setDuration(null);
+  }
+};
+
 
   useEffect(() => {
     if (mode === "edit") {
@@ -119,7 +154,6 @@ export default function CommonModal({
         uploadedFile = await uploadToS3(file, "file");
       }
 
-      // ✅ Pull user info from store
       const { admin } = useAuthStore.getState();
 
       const finalData = {
@@ -137,13 +171,13 @@ export default function CommonModal({
               : initialData.s3Key
             : uploadedFile,
 
-        // ✅ Always attach uploader data (safe even for pages that don't use it)
         uploaderId: admin.id,
-        uploaderRole: 'admin',
-
-        // ✅ Approval defaults (backend will just ignore if not needed)
+        uploaderRole: "admin",
         approvalStatus: "approved",
         isAdminContent: true,
+
+        fileSize,
+        duration,
       };
 
       if (mode === "delete") {
@@ -253,8 +287,9 @@ export default function CommonModal({
                 <Label>File</Label>
                 <Input
                   type="file"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  onChange={handleFileSelect}
                 />
+
                 {uploadProgress.file !== undefined && (
                   <div className="h-2 bg-gray-200 rounded">
                     <div
@@ -264,6 +299,15 @@ export default function CommonModal({
                   </div>
                 )}
               </div>
+            )}
+            {file && (
+              <p className="text-sm text-gray-600">
+                Size: {(fileSize! / (1024 * 1024)).toFixed(2)} MB{" "}
+                {duration !== null &&
+                  `(Duration: ${Math.floor(duration / 60)}:${String(
+                    Math.floor(duration % 60)
+                  ).padStart(2, "0")})`}
+              </p>
             )}
           </form>
         )}
@@ -277,11 +321,7 @@ export default function CommonModal({
             onClick={handleSubmit}
             disabled={loading}
           >
-            {loading
-              ? "Processing..."
-              : mode === "delete"
-              ? "Delete"
-              : "Save"}
+            {loading ? "Processing..." : mode === "delete" ? "Delete" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

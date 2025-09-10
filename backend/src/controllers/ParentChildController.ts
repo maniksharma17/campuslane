@@ -97,10 +97,10 @@ export class ParentChildController {
 });
 
   static getPendingLinks = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
-    const childId = req.user._id;
+    const studentId = req.user._id;
 
     const links = await ParentChildLink.find({
-      childId,
+      studentId,
       status: 'pending',
     }).populate('parentId', 'name email phone');
 
@@ -112,11 +112,11 @@ export class ParentChildController {
 
   static approveLink = asyncHandler(async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-    const childId = req.user._id;
+    const studentId = req.user._id;
 
     const link = await ParentChildLink.findOne({
       _id: id,
-      childId,
+      studentId,
       status: 'pending',
     });
 

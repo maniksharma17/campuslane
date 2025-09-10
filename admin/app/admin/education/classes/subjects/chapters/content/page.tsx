@@ -19,11 +19,14 @@ interface ContentItem {
   s3Key?: string;
   fileUrl?: string;
   videoUrl?: string;
-  type: "file" | "video" | "quiz";
+  type: "file" | "video" | "quiz" | "image";
   googleFormUrl?: string;
+  duration?: number; 
+  fileSize?: number;
   createdAt: string;
   updatedAt: string;
 }
+
 
 export default function ContentPage() {
   const router = useRouter();
@@ -33,7 +36,7 @@ export default function ContentPage() {
   const subjectId = searchParams.get("subjectId");
   const chapterId = searchParams.get("chapterId");
 
-  const [activeTab, setActiveTab] = useState<"file" | "video" | "quiz">("file");
+  const [activeTab, setActiveTab] = useState<"file" | "video" | "image" | "quiz">("file");
   const [allData, setAllData] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -90,6 +93,8 @@ export default function ContentPage() {
         subjectId,
         chapterId,
         type: activeTab,
+        duration: values?.duration,
+        fileSize: values?.fileSize,
       });
     }
     if (modalMode === "edit" && selectedItem) {
@@ -99,6 +104,8 @@ export default function ContentPage() {
         subjectId,
         chapterId,
         type: activeTab,
+        duration: values?.duration,
+        fileSize: values?.fileSize,
       });
     }
     if (modalMode === "delete" && selectedItem) {
@@ -239,6 +246,7 @@ export default function ContentPage() {
           <TabsList>
             <TabsTrigger value="file">Files</TabsTrigger>
             <TabsTrigger value="video">Videos</TabsTrigger>
+            <TabsTrigger value="image">Images</TabsTrigger>
             <TabsTrigger value="quiz">Quizzes</TabsTrigger>
           </TabsList>
 

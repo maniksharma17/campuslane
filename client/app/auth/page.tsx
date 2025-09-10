@@ -15,7 +15,11 @@ export default function RolePage() {
   const urlRole = searchParams.get("role") as "student" | "teacher" | "parent" | null;
 
   const { role, setField } = useOnboardingStore();
-  const { login } = useAuthStore();
+  const { login, user, isAuthenticated } = useAuthStore();
+    
+  if(user && isAuthenticated){
+    router.replace('/explore');
+  }
 
   // Sync role from URL
   useEffect(() => {
@@ -35,7 +39,6 @@ export default function RolePage() {
         if (res.data.success) {
           const { user, token } = res.data.data;
           login(user, token);
-          router.replace("/explore");
         }
       } catch (err: any) {
         router.push("/auth/details");
@@ -60,7 +63,7 @@ export default function RolePage() {
   const rolesToRender = urlRole ? [urlRole] : ["student", "teacher", "parent"];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-primary/10 p-6">
       {/* Logo */}
       <div className="mb-10">
         <Image

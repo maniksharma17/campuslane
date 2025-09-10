@@ -8,10 +8,10 @@ export interface IContent extends Document {
   subjectId: mongoose.Types.ObjectId;
   chapterId: mongoose.Types.ObjectId;
   type: ContentType;
+  duration?: number;          
+  fileSize?: number;    
   s3Key?: string;
   thumbnailKey?: string;
-  fileUrl?: string;
-  videoUrl?: string;
   quizType?: QuizType;
   googleFormUrl?: string;
   uploaderId: mongoose.Types.ObjectId;
@@ -36,13 +36,17 @@ const contentSchema = new Schema<IContent>(
     chapterId: { type: mongoose.Schema.Types.ObjectId, ref: 'Chapter', required: true },
     type: { 
       type: String, 
-      enum: ['file', 'video', 'quiz', 'game'], 
+      enum: ['file', 'video', 'quiz', 'game', 'image'], 
       required: true 
     },
     s3Key: { type: String },
+    duration: { 
+      type: Number,
+      min: 0,
+      required: function(this: IContent) { return this.type === 'video'; }
+    },
+    fileSize: { type: Number, min: 0 },
     thumbnailKey: { type: String },
-    fileUrl: { type: String },
-    videoUrl: { type: String },
     quizType: { 
       type: String, 
       enum: ['googleForm', 'native'],
@@ -86,6 +90,9 @@ contentSchema.pre('save', function(next) {
   if (this.isNew && this.uploaderRole === 'admin') {
     this.approvalStatus = 'approved';
     this.isAdminContent = true;
+  }
+  if(this.type === "video"){
+    this.duration = Math.floor(this.duration as number)
   }
   next();
 });

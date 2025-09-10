@@ -21,8 +21,8 @@ router.patch('/teachers/:id/reject', requireAdminAuth, validateParams(z.object({
 
 // Student management
 router.get('/students', requireAdminAuth, validateQuery(paginationSchema), AdminController.getStudents);
-
-router.patch('/students/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.updateStudent);
+router.get('/students/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.getStudentById);
+router.patch('/students/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.updateStudent);
 router.delete('/students/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), AdminController.deleteStudent);
 
 

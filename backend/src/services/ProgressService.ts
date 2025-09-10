@@ -20,9 +20,16 @@ export class ProgressService {
     let progress = await Progress.findOne({ studentId, contentId });
 
     if (!progress) {
+      const content = await Content.findById(contentId);
+      const contentSnapshot = {
+        title: content?.title,
+        type: content?.type,
+        s3key: content?.s3Key
+      }
       progress = new Progress({
         studentId,
         contentId,
+        contentSnapshot,
         status: 'in_progress',
       });
     } else if (progress.status === 'not_started') {

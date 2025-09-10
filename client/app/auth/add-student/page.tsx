@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import api from "@/lib/api";
 import Image from "next/image";
 import { PlusCircle } from "lucide-react";
+import { useAuthStore } from "@/lib/store/auth";
 
 export default function ParentPage() {
   const router = useRouter();
@@ -37,20 +38,21 @@ export default function ParentPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6">
-      {/* Logo */}
-      <div className="mb-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-primary/10 p-6">
+      
+
+      {/* Card */}
+      <div className="flex flex-col max-w-2xl bg-white p-10 rounded-2xl border space-y-8">
+        {/* Logo */}
+      <div className="mb-8 mx-auto">
         <Image
           src="/logos/FULL LOGO VERTICAL COLOR.png"
           alt="Logo"
-          width={160}
-          height={160}
+          width={180}
+          height={180}
           priority
         />
       </div>
-
-      {/* Card */}
-      <div className="w-full max-w-2xl bg-white p-10 rounded-2xl border space-y-8">
         {/* Heading */}
         <div className="text-center">
           <h1 className="text-3xl font-medium text-gray-800">
