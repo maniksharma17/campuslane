@@ -206,6 +206,31 @@ export class ProgressController {
     }
   );
 
+  static getStudentProgress = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const { studentId } = req.params;
+      const admin = req.admin;
+      if(!admin) {
+        return res.status(401).json({
+        success: false
+      });
+      };
+
+      const recentLimit = Math.max(0, Number(req.query.recentLimit ?? 10));
+      const watchLimit = Math.max(0, Number(req.query.watchLimit ?? 50));
+
+      const result = await ProgressService.getStudentProgress(
+        studentId,
+        recentLimit,
+        watchLimit
+      );
+
+      return res.status(200).json({
+        ...result,
+      });
+    }
+  );
+
   static deleteProgress = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;

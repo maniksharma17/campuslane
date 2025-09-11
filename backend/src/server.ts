@@ -8,7 +8,6 @@ import { connectDatabase } from './config/database';
 
 const PORT = process.env.PORT || 4000;
 
-
 const startServer = async () => {
   try {
     // Connect to database

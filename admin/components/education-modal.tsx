@@ -71,39 +71,41 @@ export default function CommonModal({
   }>({});
   const [fileSize, setFileSize] = useState<number | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
-  const [detectedType, setDetectedType] = useState<"file" | "video" | "image" | null>(null);
+  const [detectedType, setDetectedType] = useState<
+    "file" | "video" | "image" | null
+  >(null);
+  
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const selectedFile = e.target.files?.[0] || null;
-  setFile(selectedFile);
+    const selectedFile = e.target.files?.[0] || null;
+    setFile(selectedFile);
 
-  if (!selectedFile) {
-    setFileSize(null);
-    setDuration(null);
-    setDetectedType(null);
-    return;
-  }
+    if (!selectedFile) {
+      setFileSize(null);
+      setDuration(null);
+      setDetectedType(null);
+      return;
+    }
 
-  setFileSize(selectedFile.size);
+    setFileSize(selectedFile.size);
 
-  if (selectedFile.type.startsWith("video/")) {
-    setDetectedType("video");
-    const video = document.createElement("video");
-    video.preload = "metadata";
-    video.src = URL.createObjectURL(selectedFile);
-    video.onloadedmetadata = () => {
-      setDuration(video.duration);
-      URL.revokeObjectURL(video.src);
-    };
-  } else if (selectedFile.type.startsWith("image/")) {
-    setDetectedType("image");
-    setDuration(null);
-  } else {
-    setDetectedType("file"); // default for PDFs, docs, etc.
-    setDuration(null);
-  }
-};
-
+    if (selectedFile.type.startsWith("video/")) {
+      setDetectedType("video");
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.src = URL.createObjectURL(selectedFile);
+      video.onloadedmetadata = () => {
+        setDuration(video.duration);
+        URL.revokeObjectURL(video.src);
+      };
+    } else if (selectedFile.type.startsWith("image/")) {
+      setDetectedType("image");
+      setDuration(null);
+    } else {
+      setDetectedType("file"); // default for PDFs, docs, etc.
+      setDuration(null);
+    }
+  };
 
   useEffect(() => {
     if (mode === "edit") {
@@ -136,10 +138,20 @@ export default function CommonModal({
 
   const handleSubmit = async () => {
     try {
-      // ✅ Require thumbnail if neither exists in edit/add mode
-      if (mode !== "delete" && !thumbnail && !initialData.thumbnailKey) {
-        alert("Thumbnail is required.");
-        return;
+      // 🔹 Validate required fields
+      if (mode !== "delete") {
+        for (const field of fields) {
+          if (field.required && !formData[field.name]) {
+            alert(`${field.label} is required.`);
+            return; // stop submission
+          }
+        }
+
+        // 🔹 Require thumbnail if neither exists in edit/add mode
+        if (!thumbnail && !initialData.thumbnailKey) {
+          alert("Thumbnail is required.");
+          return;
+        }
       }
 
       setLoading(true);
@@ -285,10 +297,7 @@ export default function CommonModal({
             {fileUploadAllowed && (
               <div className="space-y-1">
                 <Label>File</Label>
-                <Input
-                  type="file"
-                  onChange={handleFileSelect}
-                />
+                <Input type="file" onChange={handleFileSelect} required/>
 
                 {uploadProgress.file !== undefined && (
                   <div className="h-2 bg-gray-200 rounded">

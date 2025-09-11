@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ProgressController } from '../controllers/ProgressController';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAnyAuth, requireAuth, requireRole } from '../middleware/auth';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation';
 import { openContentSchema, completeContentSchema, videoPingSchema } from '../validators/progress';
 import { mongoIdSchema, paginationSchema } from '../validators/common';
@@ -87,6 +87,16 @@ router.get(
   requireRole('parent'),
   validateParams(z.object({ studentId: mongoIdSchema })),
   ProgressController.getChildProgress
+);
+
+/**
+ * Admin can view child's progress
+ */
+router.get(
+  '/admin/:studentId',
+  requireAnyAuth,
+  validateParams(z.object({ studentId: mongoIdSchema })),
+  ProgressController.getStudentProgress
 );
 
 /**

@@ -1,68 +1,78 @@
-import { UserPlus, BookOpen, Trophy, Users, BarChart3, Shield, Heart } from 'lucide-react';
+import { UserPlus, BookOpen, Trophy, Users, BarChart3, Shield, Heart, Link, Eye, ShoppingCart, Bell, FilePlus, UserCheck, TrendingUp, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const studentOffers = [
   {
     icon: UserPlus,
-    title: 'Personalized Profiles',
-    description: 'Each student gets a tailored experience based on grade level and learning pace. Parents can manage multiple children easily.',
+    title: 'Premium Learning Access',
+    description:
+      'Get instant entry into a curated library of expert-approved lessons, games, and quizzes designed for real results.',
     color: 'bg-yellow-100 text-yellow-600',
   },
   {
-    icon: BookOpen,
-    title: 'Interactive Learning',
-    description: 'Engaging lessons, quizzes, and videos designed to make complex concepts simple and fun to explore.',
+    icon: ShieldCheck,
+    title: 'Control Your Experience',
+    description:
+      'Approve or reject parent requests with a single tap — your privacy and independence come first.',
     color: 'bg-green-100 text-green-600',
   },
   {
-    icon: Trophy,
-    title: 'Achievements & Rewards',
-    description: 'Students earn badges, certificates, and milestones to keep them motivated and celebrate progress.',
-    color: 'bg-red-100 text-red-600',
+    icon: TrendingUp,
+    title: 'Track Your Growth',
+    description:
+      'Every lesson you complete, every game you play, and every quiz you ace is tracked — so you can see your progress in real time.',
+    color: 'bg-blue-100 text-blue-600',
   },
 ];
 
 const teacherOffers = [
   {
-    icon: BookOpen,
-    title: 'Curriculum-Aligned Tools',
-    description: 'High-quality content aligned with educational standards to make lesson planning seamless.',
+    icon: UserCheck,
+    title: 'Verified Teacher Accounts',
+    description:
+      'Only approved educators get access — ensuring a trusted community of teachers committed to quality learning.',
     color: 'bg-indigo-100 text-indigo-600',
   },
   {
-    icon: BarChart3,
-    title: 'Track Class Progress',
-    description: 'Monitor student performance in real-time with detailed reports and insights.',
-    color: 'bg-blue-100 text-blue-600',
+    icon: FilePlus,
+    title: 'Professional Content Tools',
+    description:
+      'Easily upload and share worksheets, PDFs, quizzes, and videos — every resource is reviewed for excellence.',
+    color: 'bg-purple-100 text-purple-600',
   },
   {
-    icon: Shield,
-    title: 'Safe & Secure',
-    description: 'Built with safety in mind, ensuring a secure environment for teachers and students alike.',
+    icon: Bell,
+    title: 'Instant Notifications',
+    description:
+      'Get notified when your account is verified and when your content is live — no waiting in the dark.',
     color: 'bg-green-100 text-green-600',
   },
 ];
 
 const parentOffers = [
   {
-    icon: Users,
-    title: 'Stay Involved',
-    description: 'Get updates on your child’s progress and milestones instantly.',
+    icon: Link,
+    title: 'Seamless Child Linking',
+    description:
+      'Connect with your child’s account securely — requests are approved directly by students for peace of mind.',
     color: 'bg-pink-100 text-pink-600',
   },
   {
-    icon: Heart,
-    title: 'Encourage Growth',
-    description: 'Celebrate achievements with badges and certificates that keep kids motivated.',
+    icon: Eye,
+    title: 'Full Progress Insights',
+    description:
+      'See exactly what your child is learning, how they’re performing, and where they need more practice.',
     color: 'bg-yellow-100 text-yellow-600',
   },
   {
-    icon: BarChart3,
-    title: 'Insightful Reports',
-    description: 'Understand strengths and areas for improvement with easy-to-read analytics.',
-    color: 'bg-purple-100 text-purple-600',
+    icon: ShoppingCart,
+    title: 'Curated Learning Store',
+    description:
+      'Get access to hand-picked books, stationery, and digital tools designed to complement your child’s learning journey.',
+    color: 'bg-orange-100 text-orange-600',
   },
 ];
+
 
 function SectionLayout({
   heading,
@@ -84,10 +94,8 @@ function SectionLayout({
   reverse?: boolean;
 }) {
   return (
-    <section
-      className="border-t border-t-gray-400 relative py-20 bg-gray-50 bg-cover bg-center"
-    >
-      {/* Background layers */}
+    <section className="border-t border-t-gray-400 relative py-20 bg-gray-50 bg-cover bg-center">
+      {/* Background images */}
       <div
         className="absolute inset-0 bg-cover bg-center sm:hidden"
         style={{ backgroundImage: `url('${bgImageMobile}')` }}
@@ -96,9 +104,9 @@ function SectionLayout({
         className="absolute inset-0 bg-cover bg-center hidden sm:block"
         style={{ backgroundImage: `url('${bgImage}')` }}
       />
-      <div
-        className="absolute inset-0 bg-cover bg-center sm:hidden bg-white/50"
-      />
+      
+
+      
 
       {/* Content */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,13 +115,13 @@ function SectionLayout({
             reverse ? 'lg:flex-row-reverse' : ''
           }`}
         >
-          {/* Image Side */}
+          {/* Image Side (if reversed) */}
           {reverse && (
             <div className="hidden lg:block">
               <div
                 className="w-full h-[500px] bg-contain bg-no-repeat bg-center"
                 style={{ backgroundImage: `url('${image}')` }}
-              ></div>
+              />
             </div>
           )}
 
@@ -121,7 +129,7 @@ function SectionLayout({
           <div className="relative max-w-xl">
             <h2 className="text-4xl sm:text-5xl font-semibold text-gray-900 mb-4">
               {heading}{' '}
-              <span className="bg-gradient-to-r font-semibold from-indigo-500 to-indigo-700 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r font-semibold from-primary to-indigo-700 bg-clip-text text-transparent">
                 {subheading}
               </span>
             </h2>
@@ -141,14 +149,16 @@ function SectionLayout({
                     <h3 className="text-xl font-medium text-gray-900 mb-2">
                       {offer.title}
                     </h3>
-                    <p className="text-gray-600 tracking-tight">{offer.description}</p>
+                    <p className="text-gray-600 tracking-tight">
+                      {offer.description}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-12">
-              <Button className="text-xl bg-gradient-to-b shadow-md from-indigo-500 to-indigo-700 font-normal text-white lg:p-6 lg:px-10 rounded-full hover:scale-105 duration-300 transition-all">
+              <Button className="text-xl bg-gradient-to-b shadow-md from-primary to-indigo-800 font-normal text-white lg:p-6 lg:px-10 rounded-full hover:scale-105 duration-300 transition-all">
                 {ctaText}
               </Button>
             </div>
@@ -160,7 +170,7 @@ function SectionLayout({
               <div
                 className="w-full h-[500px] bg-contain bg-no-repeat bg-center"
                 style={{ backgroundImage: `url('${image}')` }}
-              ></div>
+              />
             </div>
           )}
         </div>
@@ -168,6 +178,7 @@ function SectionLayout({
     </section>
   );
 }
+
 
 export default function AudienceSections() {
   return (
@@ -177,28 +188,29 @@ export default function AudienceSections() {
         subheading="Students"
         offers={studentOffers}
         ctaText="Get Started as a Student"
-        image="/student.png"
-        bgImage="/bg-1.png"
+        image=""
+        bgImage="/bg-1-new.png"
         bgImageMobile="/bg-1-mobile.png"
+        reverse
       />
       <SectionLayout
         heading="Empowering"
         subheading="Teachers"
         offers={teacherOffers}
         ctaText="Join as a Teacher"
-        image="/teacher.png"
-        bgImage="/bg-2.png"
+        image=""
+        bgImage="/bg-2-new.png"
         bgImageMobile="/bg-2-mobile.png"
-        reverse
       />
       <SectionLayout
         heading="Support for"
         subheading="Parents"
         offers={parentOffers}
         ctaText="Explore Parent Tools"
-        image="/parent.png"
-        bgImage="/bg-3.png"
+        image=""
+        bgImage="/bg-3-new.png"
         bgImageMobile="/bg-1-mobile.png"
+        reverse
       />
     </>
   );

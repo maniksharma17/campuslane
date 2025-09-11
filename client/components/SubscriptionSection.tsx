@@ -10,6 +10,7 @@ import {
   Gamepad2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
 const planFeatures = [
   {
     icon: Star,
@@ -50,12 +51,12 @@ export default function SubscriptionCard() {
         <div className="rounded-3xl border border-gray-200 shadow-xl bg-white p-10 flex flex-col min-h-[600px] relative">
           {/* Header */}
           <div>
-            <p className="text-lg font-semibold text-indigo-600">
+            <p className="text-lg font-semibold text-primary">
               All-access plan
             </p>
             <h2 className="mt-3 text-3xl sm:text-4xl font-semibold text-gray-900 leading-tight">
               Unlock everything for{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 to-indigo-500">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
                 ₹300 / month
               </span>
             </h2>
@@ -94,7 +95,7 @@ export default function SubscriptionCard() {
               Monthly billing. Secure payments. No hidden fees.
             </p>
             <Button
-              className="flex items-center gap-3 bg-gradient-to-b from-indigo-500 to-indigo-700 text-white px-6 py-3 rounded-full shadow-lg text-lg min-w-[180px]"
+              className="flex items-center gap-3 bg-gradient-to-b from-primary to-primary/80 text-white px-6 py-3 rounded-full shadow-lg text-lg min-w-[180px]"
               aria-label="Buy subscription for ₹300 per month"
               onClick={() => (window.location.href = "/checkout?plan=monthly")}
             >

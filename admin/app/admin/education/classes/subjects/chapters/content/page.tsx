@@ -10,6 +10,13 @@ import { Pencil, Trash2, Plus, Link } from "lucide-react";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { educationApi } from "@/lib/api";
 import Image from "next/image";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ContentItem {
   _id: string;
@@ -21,12 +28,24 @@ interface ContentItem {
   videoUrl?: string;
   type: "file" | "video" | "quiz" | "image";
   googleFormUrl?: string;
-  duration?: number; 
+  duration?: number;
+  isAdminContent?: boolean;
   fileSize?: number;
+  classId: {
+    _id: string;
+    name: string;
+  };
+  subjectId: {
+    _id: string;
+    name: string;
+  };
+  chapterId: {
+    _id: string;
+    name: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
-
 
 export default function ContentPage() {
   const router = useRouter();
@@ -36,7 +55,9 @@ export default function ContentPage() {
   const subjectId = searchParams.get("subjectId");
   const chapterId = searchParams.get("chapterId");
 
-  const [activeTab, setActiveTab] = useState<"file" | "video" | "image" | "quiz">("file");
+  const [activeTab, setActiveTab] = useState<
+    "file" | "video" | "image" | "quiz"
+  >("file");
   const [allData, setAllData] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +68,14 @@ export default function ContentPage() {
   const [modalMode, setModalMode] = useState<"add" | "edit" | "delete">("add");
   const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
 
+  const [isAdminContent, setIsAdminContent] = useState(true);
+
+  const [info, setInfo] = useState({
+    className: "",
+    subjectName: "",
+    chapterName: "",
+  });
+
   const fetchContent = async () => {
     if (!classId || !subjectId || !chapterId) return;
     setLoading(true);
@@ -55,6 +84,7 @@ export default function ContentPage() {
         classId,
         subjectId,
         chapterId,
+        isAdminContent: String(isAdminContent),
         type: activeTab,
       });
       setAllData(res.data.data || []);
@@ -66,7 +96,7 @@ export default function ContentPage() {
   useEffect(() => {
     fetchContent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, classId, subjectId, chapterId]);
+  }, [activeTab, classId, subjectId, chapterId, isAdminContent]);
 
   // Filter + paginate
   const filteredData = useMemo(() => {
@@ -112,6 +142,11 @@ export default function ContentPage() {
       await educationApi.deleteContent(selectedItem._id);
     }
     fetchContent();
+  };
+
+  const handleContentTypeChange = (v: string) => {
+    if (v === "admin") setIsAdminContent(true);
+    else setIsAdminContent(false);
   };
 
   const fields: Field[] = [
@@ -224,16 +259,31 @@ export default function ContentPage() {
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Content</h1>
-          <Button
-            onClick={() => {
-              setModalMode("add");
-              setSelectedItem(null);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Add {activeTab}
-          </Button>
+          <div>{allData.length > 0 && <ContentBreadcrumb item={allData[0]} />}</div>
+        
+          <div className="flex justify-between items-center">
+            <div className="flex flex-row gap-4">
+              <Button
+                onClick={() => {
+                  setModalMode("add");
+                  setSelectedItem(null);
+                  setModalOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" /> Add {activeTab}
+              </Button>
+              <Select onValueChange={handleContentTypeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type of content"></SelectValue>
+                </SelectTrigger>
+
+                <SelectContent>
+                  <SelectItem value={"admin"}>Admin Content</SelectItem>
+                  <SelectItem value={"all"}>Teacher Content</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </div>
 
         <Tabs
@@ -283,5 +333,45 @@ export default function ContentPage() {
         />
       </div>
     </AdminLayout>
+  );
+}
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+
+function ContentBreadcrumb({ item }: { item: ContentItem }) {
+  return (
+    <Breadcrumb>
+      <BreadcrumbList>
+        {/* Class */}
+        <BreadcrumbItem>
+          <BreadcrumbLink href={`/admin/education/classes`}>
+            {item.classId.name}
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+
+        {/* Subject */}
+        <BreadcrumbItem>
+          <BreadcrumbLink
+            href={`/admin/education/classes/subjects?classId=${item.classId._id}`}
+          >
+            {item.subjectId.name}
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        <BreadcrumbSeparator />
+
+        {/* Chapter */}
+        <BreadcrumbItem>
+          <BreadcrumbLink href={`/admin/education/classes/subjects/chapters?subjectId=${item.subjectId._id}&classId=${item.classId._id}`}>{item.chapterId.name}</BreadcrumbLink>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }

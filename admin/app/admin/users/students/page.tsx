@@ -1,25 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import StudentModal, { Student } from "@/components/student-modal";
 import { DataTable } from "@/components/ui/data-table";
 import { usersApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
-export default function StudentsPage() {
+export default function StudentsProgressPage() {
   const router = useRouter();
   const [allData, setAllData] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [pagination, setPagination] = useState({ 
+  const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
-    pages: 0, 
+    pages: 0,
   });
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,7 +36,7 @@ export default function StudentsPage() {
         search: searchQuery,
       });
       setAllData(res.data.data || []);
-      setPagination(res.data.pagination)
+      setPagination(res.data.pagination);
     } catch (err) {
       console.error("fetch students error:", err);
       setAllData([]);
@@ -46,11 +46,9 @@ export default function StudentsPage() {
   };
 
   useEffect(() => {
-  fetchStudents();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [searchQuery, pagination.page, pagination.limit]);
-
-
+    fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, pagination.page, pagination.limit]);
 
   // CRUD handler called by page; the modal uploads avatar and passes finalData here
   const handleSubmit = async (values?: Partial<Student>) => {
@@ -89,7 +87,7 @@ export default function StudentsPage() {
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={() => router.push(`/admin/students/${item._id}`)}
+                    onClick={() => router.push(`/admin/users/students/progress?id=${item._id}`)}
                     title="View"
                   >
                     View
@@ -132,7 +130,9 @@ export default function StudentsPage() {
             totalPages: pagination?.pages,
           }}
           onPageChange={(page) => setPagination((p) => ({ ...p, page }))}
-          onLimitChange={(limit) => setPagination((p) => ({ ...p, limit, page: 1 }))}
+          onLimitChange={(limit) =>
+            setPagination((p) => ({ ...p, limit, page: 1 }))
+          }
           onSearch={(q) => {
             setSearchQuery(q);
             setPagination((p) => ({ ...p, page: 1 }));

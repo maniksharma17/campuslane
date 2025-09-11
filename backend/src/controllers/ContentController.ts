@@ -22,9 +22,9 @@ export class ContentController {
 
       const [classes, total] = await Promise.all([
         Class.find({ isDeleted: false })
-        .sort({ name: 1 })
-        .skip(skip)
-        .limit(limit),
+          .sort({ name: 1 })
+          .skip(skip)
+          .limit(limit),
         Class.countDocuments(),
       ]);
 
@@ -33,6 +33,19 @@ export class ContentController {
       res.status(200).json({
         success: true,
         ...result,
+      });
+    }
+  );
+
+  static getClassById = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const {id} = req.query;
+
+      const classData = await Class.findById(id);
+
+      res.status(200).json({
+        success: true,
+        ...classData
       });
     }
   );
@@ -114,6 +127,20 @@ export class ContentController {
     }
   );
 
+  static getSubjectById = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const {id} = req.query;
+
+      const subjectData = await Subject.findById(id);
+
+      res.status(200).json({
+        success: true,
+        ...subjectData
+      });
+    }
+  );
+
+
   static createSubject = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const subject = new Subject(req.body);
@@ -191,6 +218,19 @@ export class ContentController {
     }
   );
 
+  static getChapterById = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const {id} = req.query;
+
+      const chapterData = await Chapter.find({_id: id});
+
+      res.status(200).json({
+        success: true,
+        ...chapterData
+      });
+    }
+  );
+
   static createChapter = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const chapter = new Chapter(req.body);
@@ -258,6 +298,7 @@ export class ContentController {
         chapterId,
         type,
         approvalStatus,
+        isAdminContent,
         search,
         page,
         limit,
@@ -275,6 +316,10 @@ export class ContentController {
       if (classId) filter.classId = classId;
       if (subjectId) filter.subjectId = subjectId;
       if (chapterId) filter.chapterId = chapterId;
+      if (typeof isAdminContent !== "undefined") {
+        filter.isAdminContent = isAdminContent === "true";
+        
+      }
       if (type) filter.type = type;
 
       // Handle approval status filter based on user role
@@ -324,7 +369,7 @@ export class ContentController {
         limit,
         includeDeleted,
       } = req.query as any;
-     
+
       const { skip } = getPaginationParams(req.query);
 
       const filter: any = {};
@@ -337,7 +382,9 @@ export class ContentController {
       if (subjectId) filter.subjectId = subjectId;
       if (chapterId) filter.chapterId = chapterId;
       if (type) filter.type = type;
-      if (uploaderId) filter.uploaderId = mongoose.Types.ObjectId.createFromHexString(uploaderId);
+      if (uploaderId)
+        filter.uploaderId =
+          mongoose.Types.ObjectId.createFromHexString(uploaderId);
       if (approvalStatus) filter.approvalStatus = approvalStatus;
 
       // Add text search

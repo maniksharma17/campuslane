@@ -7,7 +7,7 @@ import { QueryProvider } from '@/providers/query-provider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'EduFlow Admin Dashboard',
+  title: 'CampusLane Admin Dashboard',
   description: 'Educational platform admin dashboard with e-commerce management',
 };
 

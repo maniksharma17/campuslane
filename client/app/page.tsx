@@ -8,6 +8,7 @@ import CTASection from '@/components/cta-section';
 import Footer from '@/components/footer';
 import SubscriptionSection from '@/components/SubscriptionSection';
 import DownloadAppPage from '@/components/DownloadAppSection';
+import EcommerceSection from '@/components/ECommerce';
 
 export default function Home() {
   return (
@@ -16,7 +17,9 @@ export default function Home() {
       <HeroSection />
       <HowItWorks />
       <FeaturesSection />
+      
       <SubscriptionSection />
+      <EcommerceSection />
       <DownloadAppPage />
       <Footer />
     </main>

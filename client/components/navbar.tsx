@@ -133,8 +133,8 @@ export default function Navbar() {
                 <Button variant="ghost" className="text-gray-700 rounded-full">
                   <Link href="/auth/signin">Sign In</Link>
                 </Button>
-                <Button className="bg-gradient-to-b from-indigo-500 to-indigo-700 text-white px-6 rounded-full hover:scale-105 duration-300 transition-all">
-                  <Link href="/auth/register">Get Started</Link>
+                <Button className=" bg-primary text-white px-6 rounded-full hover:scale-105 duration-300 transition-all">
+                  <Link href="/auth">Get Started</Link>
                 </Button>
               </>
             ) : (
