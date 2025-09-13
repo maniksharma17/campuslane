@@ -497,6 +497,25 @@ console.log(req.query)
     }
   );
 
+  static getOrders = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response) => {
+      const { page, limit } = req.query as any;
+      const { skip } = getPaginationParams(req.query);
+
+      const [orders, total] = await Promise.all([
+        Order.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Order.countDocuments(),
+      ]);
+
+      const result = createPaginationResult(orders, total, page, limit);
+
+      res.status(200).json({
+        success: true,
+        ...result,
+      });
+    }
+  );
+
   static getMyOrders = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { page, limit } = req.query as any;

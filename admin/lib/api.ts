@@ -235,7 +235,7 @@ export const ecommerceApi = {
     search?: string;
   }) => api.get("/admin/orders", { params }),
 
-  getOrderById: (id: string) => api.get(`/admin/orders/${id}`),
+  getOrderById: (id: string) => api.get(`/orders/${id}`),
 
   updateOrderStatus: (id: string, status: string) =>
     api.patch(`/admin/orders/${id}/status`, { status }),

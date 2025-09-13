@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { EcommerceController } from '../controllers/EcommerceController';
-import { requireAuth, requireRole, requireAdminAuth } from '../middleware/auth';
+import { requireAuth, requireRole, requireAdminAuth, requireAnyAuth } from '../middleware/auth';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation';
 import { 
   createSchoolSchema,
@@ -53,8 +53,9 @@ router.delete('/cart', requireAuth, EcommerceController.clearCart);
 
 // Orders
 router.post('/orders/checkout', requireAuth, validateBody(checkoutSchema), EcommerceController.checkout);
+router.get('/admin/orders', requireAdminAuth, validateQuery(paginationSchema), EcommerceController.getOrders);
 router.get('/orders/mine', requireAuth, validateQuery(paginationSchema), EcommerceController.getMyOrders);
-router.get('/orders/:id', requireAuth, validateParams(z.object({ id: mongoIdSchema })), EcommerceController.getOrderById);
+router.get('/orders/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), EcommerceController.getOrderById);
 router.patch('/orders/:id/cancel', requireAuth, validateParams(z.object({ id: mongoIdSchema })), EcommerceController.cancelOrder);
 
 // Admin order management
