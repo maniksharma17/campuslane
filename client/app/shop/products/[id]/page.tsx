@@ -103,7 +103,7 @@ export default function ProductDetailPage(): JSX.Element {
     } catch (err: any) {
       console.error("fetchProduct error", err);
       setError(
-        err?.response?.data?.message || err?.message || "Failed to load product"
+        err?.response?.data?.error.message || err?.message || "Failed to load product"
       );
       setProduct(null);
     } finally {
@@ -183,7 +183,7 @@ export default function ProductDetailPage(): JSX.Element {
     } catch (err: any) {
       console.error("addToCart error", err);
       const message =
-        err?.response?.data?.message ||
+        err?.response?.data?.error.message ||
         "Failed to add to cart. Please try again.";
       setSnackMessage(message);
       setSnackVariant("error");
@@ -205,7 +205,7 @@ export default function ProductDetailPage(): JSX.Element {
     } catch (err: any) {
       console.error("addToWishlist error", err);
       const message =
-        err?.response?.data?.message || "Failed to add to wishlist";
+        err?.response?.data?.error.message || "Failed to add to wishlist";
       setSnackMessage(message);
       setSnackVariant("error");
       setSnackOpen(true);

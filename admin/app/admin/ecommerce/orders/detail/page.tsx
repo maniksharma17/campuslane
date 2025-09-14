@@ -9,50 +9,59 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
-interface IShippingAddress {
-  name: string;
-  phone: string;
-  street: string;
-  streetOptional?: string;
-  city: string;
-  state: string;
-  zipcode: string;
-  country: string;
-}
+type RawItem = {
+  _id?: string;
+  productId?: string | Record<string, any>;
+  variantId?: string | Record<string, any>;
+  name?: string;
+  price?: number;
+  quantity?: number;
+  variant?: { images: string[]; name: string };
+};
 
-interface IOrderItem {
+type RawOrder = {
   _id: string;
-  productId: {
-    _id: string;
-    name: string;
-    images: string[];
-  };
-  quantity: number;
-  price: number;
-}
+  items?: RawItem[];
+  totalAmount?: number;
+  status?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  shippingAddress?: Record<string, any>;
+  paymentType?: string;
+  paymentStatus?: string;
+  deliveryRate?: number;
+  freeShipping?: boolean;
+};
 
-interface IOrder {
-  _id: string;
-  items: IOrderItem[];
-  totalAmount: number;
-  status: "pending" | "paid" | "shipped" | "delivered" | "cancelled";
-  shippingAddress: IShippingAddress;
-  paymentType: "COD" | "Razorpay";
-  paymentStatus: "pending" | "success" | "failed";
-  paymentId?: string;
-  deliveryRate: number;
-  freeShipping: boolean;
-  createdAt: string;
-}
+const STATUS_FLOW = [
+  "pending",
+  "confirmed",
+  "packed",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+];
 
 export default function OrderDetailPage() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("id");
 
-  const [order, setOrder] = useState<IOrder | null>(null);
+  const [order, setOrder] = useState<RawOrder | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // edit modal
+  const [editOpen, setEditOpen] = useState(false);
+  const [editStatus, setEditStatus] = useState<string>("");
 
   useEffect(() => {
     if (!orderId) return;
@@ -67,6 +76,17 @@ export default function OrderDetailPage() {
       }
     })();
   }, [orderId]);
+
+  async function handleSaveEdit() {
+    if (!order) return;
+    try {
+      await ecommerceApi.updateOrderStatus(order._id, editStatus);
+      setOrder({ ...order, status: editStatus });
+      setEditOpen(false);
+    } catch (err) {
+      console.error("update order error", err);
+    }
+  }
 
   if (loading)
     return (
@@ -86,12 +106,27 @@ export default function OrderDetailPage() {
       </AdminLayout>
     );
 
+  const statusIndex = STATUS_FLOW.indexOf(order.status || "pending");
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold">
-          Order #{order._id.slice(-6).toUpperCase()}
-        </h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold">
+            Order #{order._id.slice(-6).toUpperCase()}
+          </h1>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setEditStatus(order.status || "pending");
+              setEditOpen(true);
+            }}
+          >
+            <Pencil className="w-4 h-4 mr-1" /> Edit
+          </Button>
+        </div>
+
         <Card>
           <CardHeader className="flex flex-col md:flex-row justify-between">
             <CardTitle className="text-xl">Order Summary</CardTitle>
@@ -105,33 +140,59 @@ export default function OrderDetailPage() {
               }
               className="text-sm"
             >
-              {order.status.toUpperCase()}
+              {order.status?.toUpperCase()}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Customer + Shipping Info */}
+            {/* Status Progress Bar */}
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {STATUS_FLOW.map((s, idx) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div
+                    className={`rounded-full w-8 h-8 flex items-center justify-center text-xs ${
+                      idx <= statusIndex
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+                  <span className="text-sm capitalize">{s.replace(/_/g, " ")}</span>
+                  {idx < STATUS_FLOW.length - 1 && (
+                    <div
+                      className={`h-0.5 w-8 ${
+                        idx < statusIndex ? "bg-green-500" : "bg-gray-200"
+                      }`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <Separator />
+
+            {/* Shipping + Payment */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h2 className="text-lg font-semibold mb-2">Shipping Address</h2>
-                <p className="text-sm">{order.shippingAddress.name}</p>
-                <p className="text-sm">{order.shippingAddress.phone}</p>
-                <p className="text-sm">
-                  {order.shippingAddress.street}
-                  {order.shippingAddress.streetOptional
-                    ? `, ${order.shippingAddress.streetOptional}`
-                    : ""}
-                </p>
-                <p className="text-sm">
-                  {order.shippingAddress.city}, {order.shippingAddress.state}{" "}
-                  {order.shippingAddress.zipcode}
-                </p>
-                <p className="text-sm">{order.shippingAddress.country}</p>
+                <div className="text-sm space-y-1">
+                  <p>{order.shippingAddress?.name}</p>
+                  <p>{order.shippingAddress?.phone}</p>
+                  <p>
+                    {order.shippingAddress?.street}
+                    {order.shippingAddress?.streetOptional &&
+                      `, ${order.shippingAddress.streetOptional}`}
+                  </p>
+                  <p>
+                    {order.shippingAddress?.city}, {order.shippingAddress?.state}{" "}
+                    {order.shippingAddress?.zipcode}
+                  </p>
+                  <p>{order.shippingAddress?.country}</p>
+                </div>
               </div>
               <div>
                 <h2 className="text-lg font-semibold mb-2">Payment</h2>
-                <p className="text-sm">
-                  Type: <span className="font-medium">{order.paymentType}</span>
-                </p>
+                <p className="text-sm">Type: {order.paymentType}</p>
                 <p className="text-sm">
                   Status:{" "}
                   <span
@@ -146,47 +207,46 @@ export default function OrderDetailPage() {
                     {order.paymentStatus}
                   </span>
                 </p>
-                {order.paymentId && (
-                  <p className="text-xs text-gray-500">
-                    Payment ID: {order.paymentId}
-                  </p>
-                )}
               </div>
             </div>
 
             <Separator />
 
-            {/* Order Items */}
+            {/* Items */}
             <div>
               <h2 className="text-lg font-semibold mb-3">Items</h2>
               <div className="space-y-4">
-                {order.items.map((item) => (
-                  <div
-                    key={item._id}
-                    className="flex items-center gap-4 border-b pb-3"
-                  >
-                    <Image
-                      src={
-                        item.productId?.images?.[0]
-                          ? `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${item.productId.images[0]}`
-                          : "/placeholder.png"
-                      }
-                      alt={item.productId?.name ?? "Product"}
-                      width={80}
-                      height={80}
-                      className="rounded object-cover w-20 h-20"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium">{item.productId?.name}</p>
-                      <p className="text-sm text-gray-500">
-                        Qty: {item.quantity}
+                {order.items?.map((item) => {
+                  const variant = item.variant ?? {};
+                  return (
+                    <div
+                      key={item._id}
+                      className="flex items-center gap-4 border-b pb-3"
+                    >
+                      <Image
+                        src={
+                          variant.images?.[0]
+                            ? `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${variant.images[0]}`
+                            : "/placeholder.png"
+                        }
+                        alt={variant.name ?? item.name ?? "Product"}
+                        width={80}
+                        height={80}
+                        className="rounded object-cover w-20 h-20"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-gray-500">
+                          Variant: {variant.name ?? "-"}
+                        </p>
+                        <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                      </div>
+                      <p className="font-semibold">
+                        ₹{(item.price ?? 0) * (item.quantity ?? 1)}
                       </p>
                     </div>
-                    <p className="font-semibold">
-                      ₹{item.price * item.quantity}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -197,15 +257,41 @@ export default function OrderDetailPage() {
               <span>Total</span>
               <span>₹{order.totalAmount}</span>
             </div>
-
-            {/* Admin Actions */}
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline">Mark as Shipped</Button>
-              <Button variant="destructive">Cancel Order</Button>
-            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Modal */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Order</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <Select value={editStatus} onValueChange={(v) => setEditStatus(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_FLOW.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

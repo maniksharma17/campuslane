@@ -179,9 +179,9 @@ export default function ProductsPage(): JSX.Element {
       setSnackVariant("success");
       setSnackOpen(true);
     } catch (err: any) {
-      console.error("addToCart error", err);
+      console.error("addToCart error", err?.response);
       const message =
-        err?.response?.data?.message ||
+        err?.response?.data?.error.message ||
         "Failed to add to cart. Please try again.";
 
       setSnackMessage(message);
@@ -259,19 +259,11 @@ export default function ProductsPage(): JSX.Element {
 
             <Button
               onClick={() => setShowFilters((s) => !s)}
-              className="hidden md:inline-flex"
+              className="md:hidden inline-flex"
             >
               Filters
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPage(1);
-                fetchProducts();
-              }}
-            >
-              Refresh
-            </Button>
+            
           </div>
         </header>
 

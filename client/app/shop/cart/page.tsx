@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import Image from "next/image";
 import Snack from "@/components/ui/snack";
 import { ShoppingCart, Trash2 } from "lucide-react";
+import { useAuthStore } from "@/lib/store/auth";
 
 const BASE_URL=process.env.NEXT_PUBLIC_AWS_STORAGE_URL;
 
@@ -29,17 +30,27 @@ export default function CartPage(): JSX.Element {
   const router = useRouter();
   const [cart, setCart] = useState<Cart>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // itemId being updated
+  const [actionLoading, setActionLoading] = useState<string | null>(null); 
+  const {user, isAuthenticated} = useAuthStore();
 
+ 
   // snack
   const [snackOpen, setSnackOpen] = useState(false);
   const [snackMessage, setSnackMessage] = useState("");
   const [snackVariant, setSnackVariant] = useState<"success" | "error" | "info">("info");
 
   useEffect(() => {
-    fetchCart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // if user is NOT authenticated, send them to /auth
+  if (!user || !isAuthenticated) {
+    router.push('/auth');
+    return;
+  }
+
+  // fetch cart only when authenticated
+  fetchCart();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [user, isAuthenticated, router]);
+
 
   async function fetchCart() {
     setLoading(true);

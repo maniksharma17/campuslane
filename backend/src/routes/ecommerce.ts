@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { EcommerceController } from '../controllers/EcommerceController';
-import { requireAuth, requireRole, requireAdminAuth, requireAnyAuth } from '../middleware/auth';
+import { requireAuth, requireAdminAuth, requireAnyAuth } from '../middleware/auth';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation';
 import { 
   createSchoolSchema,

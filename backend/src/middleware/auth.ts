@@ -58,7 +58,7 @@ export const requireAuth = async (
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      throw new AuthenticationError('No token provided');
+      throw new AuthenticationError('Sign in with your account to continue');
     }
 
     const decoded = verifyToken(token);
