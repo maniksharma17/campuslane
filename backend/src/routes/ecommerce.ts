@@ -37,6 +37,14 @@ router.get('/products', validateQuery(paginationSchema.extend({
   category: mongoIdSchema.optional(),
   school: mongoIdSchema.optional(),
   isActive: z.string().optional(),
+  brand: z.string().optional(),
+  gender: z.string().optional(),
+  subject: z.string().optional(),
+  type: z.string().optional(),
+  search: z.string().optional(),
+  minPrice: z.string().optional(),
+  maxPrice: z.string().optional(),
+  inStock: z.string().optional(),
 })), EcommerceController.getProducts);
 
 router.get('/products/:id', validateParams(z.object({ id: mongoIdSchema })), EcommerceController.getProductById);
@@ -53,6 +61,7 @@ router.delete('/cart', requireAuth, EcommerceController.clearCart);
 
 // Orders
 router.post('/orders/checkout', requireAuth, validateBody(checkoutSchema), EcommerceController.checkout);
+router.post('/orders/reorder/:orderId', requireAuth, validateParams(z.object({ orderId: mongoIdSchema })), EcommerceController.reorder);
 router.get('/admin/orders', requireAdminAuth, validateQuery(paginationSchema), EcommerceController.getOrders);
 router.get('/orders/mine', requireAuth, validateQuery(paginationSchema), EcommerceController.getMyOrders);
 router.get('/orders/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), EcommerceController.getOrderById);

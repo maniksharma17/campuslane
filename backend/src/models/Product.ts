@@ -7,6 +7,7 @@ export interface IProductVariant {
   cutoffPrice?: number;
   stock: number;
   images?: string[];
+  
 }
 
 export interface IProduct extends Document {

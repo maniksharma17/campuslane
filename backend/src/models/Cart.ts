@@ -5,6 +5,7 @@ export interface ICartItem {
   variantId: mongoose.Types.ObjectId;
   quantity: number;
   price: number;
+  
 }
 
 export interface ICart extends Document {

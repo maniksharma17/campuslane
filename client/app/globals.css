@@ -99,3 +99,18 @@ html {
 .shadow-colorful-lg {
   box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.4), 0 15px 20px -10px rgba(147, 51, 234, 0.3);
 }
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
