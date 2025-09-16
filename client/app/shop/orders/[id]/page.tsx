@@ -34,7 +34,8 @@ type RawItem = {
   quantity?: number;
   variant?: {
     images: string[];
-    name: string
+    name: string;
+    price: number
   }
 };
 

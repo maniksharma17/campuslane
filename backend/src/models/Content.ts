@@ -1,6 +1,13 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { ContentType, ApprovalStatus, QuizType, UserRole } from '../types';
 
+export interface IQuestion {
+  questionText: string;
+  s3Key?: string;
+  options: string[];       
+  correctOption: number;  
+}
+
 export interface IContent extends Document {
   title: string;
   description?: string;
@@ -14,10 +21,12 @@ export interface IContent extends Document {
   thumbnailKey?: string;
   quizType?: QuizType;
   googleFormUrl?: string;
+  questions?: IQuestion[];  
   uploaderId: mongoose.Types.ObjectId;
   uploaderRole: UserRole;
   isAdminContent: boolean;
   approvalStatus: ApprovalStatus;
+  feedback: string;
   tags: string[];
   isDeleted?: boolean;
   deletedAt?: Date;
@@ -26,6 +35,31 @@ export interface IContent extends Document {
   updatedAt: Date;
   __v?: number;
 }
+
+// Question sub-schema
+const questionSchema = new Schema<IQuestion>(
+  {
+    questionText: { type: String, required: true },
+    s3Key: { type: String },
+    options: {
+      type: [String],
+      validate: {
+        validator: function (val: string[]) {
+          return val.length === 4;
+        },
+        message: 'Each question must have exactly 4 options.',
+      },
+      required: true,
+    },
+    correctOption: {
+      type: Number,
+      min: 0,
+      max: 3,
+      required: true,
+    },
+  },
+  { _id: false }
+);
 
 const contentSchema = new Schema<IContent>(
   {
@@ -53,6 +87,12 @@ const contentSchema = new Schema<IContent>(
       required: function(this: IContent) { return this.type === 'quiz'; }
     },
     googleFormUrl: { type: String },
+    questions: {
+      type: [questionSchema],
+      required: function(this: IContent) { 
+        return this.type === 'quiz' && this.quizType === 'native';
+      },
+    },
     uploaderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     uploaderRole: { 
       type: String, 
@@ -66,6 +106,7 @@ const contentSchema = new Schema<IContent>(
       required: true,
       default: 'pending'
     },
+    feedback: String,
     tags: [{ type: String }],
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
@@ -97,6 +138,7 @@ contentSchema.pre('save', function(next) {
   next();
 });
 
+// Indexes
 contentSchema.index({ classId: 1, subjectId: 1, chapterId: 1 });
 contentSchema.index({ approvalStatus: 1, uploaderRole: 1 });
 contentSchema.index({ uploaderId: 1 });

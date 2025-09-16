@@ -10,23 +10,40 @@ import CommonModal from "@/components/CommonModal";
 import { useAuthStore } from "@/lib/store/auth";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useParams } from "next/navigation";
+import Snack from "@/components/ui/snack";
 
-const TYPE_TABS = ["all", "file", "video", "quiz", "game", "image"] as const;
+const TYPE_TABS = ["all", "file", "video", "quiz", "image"] as const;
 
 export default function ContentPage() {
-  const [rawData, setRawData] = useState<any[]>([]);
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
+
+  // server pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeTypeTab, setActiveTypeTab] =
     useState<(typeof TYPE_TABS)[number]>("all");
   const [statusFilter, setStatusFilter] = useState<string | undefined>(
     undefined
   );
 
+  // modals / selection / UI
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "delete">("add");
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [snackOpen, setSnackOpen] = useState(false);
+  const [snackMessage, setSnackMessage] = useState("");
+  const [snackVariant, setSnackVariant] = useState<
+    "success" | "error" | "info"
+  >("info");
 
   const { classId, subjectId, chapterId } = useParams<{
     classId: string;
@@ -36,58 +53,83 @@ export default function ContentPage() {
 
   const { user } = useAuthStore();
 
+  // debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // fetch server data with pagination + filters
   const fetchData = useCallback(async () => {
+    if (!user) return;
+    if (!classId || !subjectId || !chapterId) return;
+
     setLoading(true);
-    if(!user) return;
     try {
       const res = await api.get("/teacher/content", {
         params: {
           classId,
           subjectId,
           chapterId,
-          uploaderId: user._id,  // this must exist and be a string
+          uploaderId: user._id,
           approvalStatus: statusFilter,
+          type: activeTypeTab !== "all" ? activeTypeTab : undefined,
+          search: debouncedSearch || undefined,
+          page,
+          limit,
         },
       });
-      // adapt to backend structure: res.data.data array
-      setRawData(res.data?.data || []);
+
+      const items = res.data?.data || [];
+      const pg = res.data?.pagination || res.data?.meta?.pagination || null;
+
+      setData(items);
+
+      if (pg) {
+        setTotal(typeof pg.total === "number" ? pg.total : items.length);
+        setTotalPages(
+          typeof pg.totalPages === "number"
+            ? pg.pages
+            : Math.max(1, Math.ceil((pg.total || items.length) / limit))
+        );
+      } else {
+        // Fallback when server doesn't return pagination
+        setTotal(items.length);
+        setTotalPages(Math.max(1, Math.ceil(items.length / limit)));
+      }
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err?.response?.data?.message || "Failed to fetch content.");
+      setData([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  }, [user, classId, subjectId, chapterId]);
+  }, [
+    user,
+    classId,
+    subjectId,
+    chapterId,
+    statusFilter,
+    activeTypeTab,
+    debouncedSearch,
+    page,
+    limit,
+  ]);
 
+  // initial + whenever deps change
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchData]);
 
-  const filteredData = useMemo(() => {
-    return rawData.filter((item: any) => {
-      if (!item) return false;
-      const matchesSearch =
-        !search ||
-        (item.title || "")
-          .toString()
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        (item.description || "")
-          .toString()
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        (item.tags || []).some((tag: string) =>
-          tag.toLowerCase().includes(search.toLowerCase())
-        );
-
-      const matchesType =
-        activeTypeTab === "all" || item.type === activeTypeTab;
-      const matchesStatus =
-        !statusFilter || item.approvalStatus === statusFilter;
-
-      return matchesSearch && matchesType && matchesStatus;
-    });
-  }, [rawData, search, activeTypeTab, statusFilter]);
+  // reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [activeTypeTab, statusFilter, debouncedSearch, classId, subjectId, chapterId]);
 
   const columns = [
     { key: "title", title: "Title", sortable: true },
@@ -109,7 +151,6 @@ export default function ContentPage() {
         );
       },
     },
-
     {
       key: "actions",
       title: "Actions",
@@ -119,8 +160,12 @@ export default function ContentPage() {
             size="sm"
             variant="outline"
             onClick={() => {
-              // quick view would go here
-              window.open(item.s3Key ? `/s3/${item.s3Key}` : "#", "_blank");
+              window.open(
+                item.s3Key
+                  ? `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${item.s3Key}`
+                  : "#",
+                "_blank"
+              );
             }}
           >
             View
@@ -153,40 +198,34 @@ export default function ContentPage() {
 
   const handleSubmit = async (values?: Record<string, any>) => {
     try {
-      const payload = {
-        ...values,
-        classId,
-        subjectId,
-        chapterId,
-      };
+      const payload = { ...values, classId, subjectId, chapterId };
 
       if (modalMode === "add") {
-        const res = await api.post("/content", payload);
-        setRawData((prev) => [...prev, res.data]);
+        await api.post("/content", payload);
         toast.success("Content added!");
       } else if (modalMode === "edit" && selectedItem) {
-        const res = await api.patch(`/content/${selectedItem._id}`, payload);
-        setRawData((prev) =>
-          prev.map((c) => (c._id === selectedItem._id ? res.data : c))
-        );
+        await api.patch(`/content/${selectedItem._id}`, payload);
         toast.success("Content updated!");
       } else if (modalMode === "delete" && selectedItem) {
         await api.delete(`/content/${selectedItem._id}`);
-        setRawData((prev) => prev.filter((c) => c._id !== selectedItem._id));
         toast.success("Content deleted!");
       }
+
+      // refresh page after change
+      fetchData();
     } catch (err: any) {
       const code = err?.response?.status;
       const msg = err?.response?.data?.message || "Request failed.";
-      setErrorMsg(`Error ${code}: ${msg}`);
+      setSnackMessage(msg);
+      setSnackVariant("error");
+      setSnackOpen(true);
       toast.error(`Error ${code}: ${msg}`);
-    } finally {
-      fetchData();
     }
   };
 
   return (
     <div className="p-6 space-y-8 lg:p-20">
+      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold">My Content</h2>
@@ -209,10 +248,13 @@ export default function ContentPage() {
         </div>
       </div>
 
-      {/* Type tabs for quick filtering */}
+      {/* Type tabs */}
       <Tabs
         value={activeTypeTab}
-        onValueChange={(v) => setActiveTypeTab(v as any)}
+        onValueChange={(v) => {
+          setActiveTypeTab(v as any);
+          setPage(1);
+        }}
       >
         <TabsList className="grid grid-cols-6 gap-2 max-w-md">
           {TYPE_TABS.map((t) => (
@@ -223,13 +265,28 @@ export default function ContentPage() {
         </TabsList>
       </Tabs>
 
+      {/* Data Table */}
       <div className="pt-4">
         <DataTable
-          data={filteredData}
+          data={data}
           columns={columns}
           loading={loading}
           emptyMessage="No content found."
-          onSearch={(q) => setSearch(q)}
+          onSearch={(q) => {
+            setSearchQuery(q);
+            setPage(1);
+          }}
+          pagination={{
+            page,
+            limit,
+            total,
+            totalPages,
+          }}
+          onPageChange={(p: number) => setPage(p)}
+          onLimitChange={(newLimit: number) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
         />
       </div>
 
@@ -239,6 +296,7 @@ export default function ContentPage() {
         </div>
       )}
 
+      {/* Modal */}
       <CommonModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -248,6 +306,14 @@ export default function ContentPage() {
         onSubmit={handleSubmit}
         fileUploadAllowed
         defaultType={(activeTypeTab === "all" ? "file" : activeTypeTab) as any}
+      />
+
+      {/* Snack */}
+      <Snack
+        open={snackOpen}
+        onClose={() => setSnackOpen(false)}
+        message={snackMessage}
+        variant={snackVariant}
       />
     </div>
   );

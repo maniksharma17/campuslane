@@ -15,7 +15,7 @@ import { Heart } from "lucide-react";
 // --- Local types (tight to server response) ---
 type Category = { _id: string; name: string; image?: string };
 type Variant = {
-  _id?: string;
+  id?: string;
   name: string;
   price: number;
   cutoffPrice?: number;
@@ -170,7 +170,7 @@ export default function ProductsPage(): JSX.Element {
     try {
       await api.post("/cart/items", {
         productId: product._id,
-        variantId: product.variants?.[0]?._id,
+        variantId: product.variants?.[0]?.id,
         quantity: 1,
         price: product.variants?.[0]?.price,
       });

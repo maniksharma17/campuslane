@@ -452,11 +452,11 @@ export class EcommerceController {
   static updateProduct = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;
+      console.log(req.body)
 
       const product = await Product.findOneAndUpdate(
         { _id: id, isDeleted: false },
         req.body,
-        { new: true, runValidators: true }
       );
 
       if (!product) {
@@ -507,6 +507,7 @@ export class EcommerceController {
           populate: { path: "category", select: "name" },
         })
         .lean();
+        console.log(cart)
 
       if (!cart) {
         await Cart.create({ userId, items: [] });
@@ -518,7 +519,7 @@ export class EcommerceController {
         const product = item.productId;
         if (product?.variants && item.variantId) {
           const variant = product.variants.find(
-            (v: any) => v._id.toString() === item.variantId.toString()
+            (v: any) => v.id.toString() === item.variantId.toString()
           );
           return {
             ...item,
@@ -555,7 +556,7 @@ export class EcommerceController {
       }
 
       const variant = product.variants.find(
-        (v: any) => v._id.toString() === variantId
+        (v: any) => v.id.toString() === variantId
       );
       if (!variant) {
         throw new NotFoundError("Product variant not found");
@@ -603,7 +604,7 @@ export class EcommerceController {
   static updateCartItem = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { itemId } = req.params;
-      const { quantity } = req.body;
+      const { quantity, variantId } = req.body;
       const userId = req.user._id;
 
       const cart = await Cart.findOne({ userId });
@@ -611,14 +612,41 @@ export class EcommerceController {
         throw new NotFoundError("Cart not found");
       }
 
+      // Find the cart item by _id
       const item = cart.items.find(
-        (item) => item.productId.toString() === itemId
+        (i) => (i as any)._id.toString() === itemId.toString()
       );
       if (!item) {
         throw new NotFoundError("Cart item not found");
       }
 
-      item.quantity = quantity;
+      // ✅ Update quantity (if provided)
+      if (quantity !== undefined) {
+        if (quantity < 1) {
+          throw new ValidationError("Quantity must be at least 1");
+        }
+        item.quantity = quantity;
+      }
+
+      // ✅ Update variant (if provided)
+      if (variantId) {
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          throw new NotFoundError("Product not found");
+        }
+
+        const variant = product.variants.find(
+          (v: any) => v._id.toString() === variantId.toString()
+        );
+        if (!variant) {
+          throw new NotFoundError("Variant not found for this product");
+        }
+
+        // Update variantId & reset price from variant
+        item.variantId = variant.id;
+        item.price = variant.price;
+      }
+
       await cart.save();
 
       res.status(200).json({
@@ -637,10 +665,17 @@ export class EcommerceController {
       if (!cart) {
         throw new NotFoundError("Cart not found");
       }
-      console.log(cart);
+
+      // ✅ Remove by cart item _id (so multiple variants of same product work fine)
+      const beforeCount = cart.items.length;
       cart.items = cart.items.filter(
-        (item) => item.productId.toString() !== itemId
+        (item: any) => item._id.toString() !== itemId.toString()
       );
+
+      if (cart.items.length === beforeCount) {
+        throw new NotFoundError("Cart item not found");
+      }
+
       await cart.save();
 
       res.status(200).json({
@@ -680,8 +715,36 @@ export class EcommerceController {
         throw new ValidationError("Cart is empty");
       }
 
+      // Transform cart items → order items with variant snapshot
+      const orderItems = cart.items.map((item: any) => {
+        const product: any = item.productId;
+        if (!product) {
+          throw new NotFoundError("Product not found for cart item");
+        }
+
+        const variant = product.variants.find(
+          (v: any) => v._id.toString() === item.variantId.toString()
+        );
+
+        if (!variant) {
+          throw new NotFoundError("Variant not found for product");
+        }
+
+        return {
+          productId: product._id,
+          variantId: variant._id,
+          quantity: item.quantity,
+          price: variant.price, // store latest variant price
+          variant: {
+            name: variant.name,
+            price: variant.price,
+            images: variant.images || [],
+          },
+        };
+      });
+
       // Calculate total
-      let totalAmount = cart.items.reduce((total, item) => {
+      let totalAmount = orderItems.reduce((total, item) => {
         return total + item.price * item.quantity;
       }, 0);
 
@@ -692,7 +755,7 @@ export class EcommerceController {
       // Create order
       const order = new Order({
         userId,
-        items: cart.items,
+        items: orderItems,
         totalAmount,
         shippingAddress,
         paymentType,
@@ -829,22 +892,9 @@ export class EcommerceController {
         throw new NotFoundError("Order not found");
       }
 
-      // attach variant details manually
-      const orderObj = order.toObject();
-      orderObj.items = orderObj.items.map((item: any) => {
-        const variant =
-          item.productId?.variants?.find(
-            (v: any) => v._id.toString() === item.variantId.toString()
-          ) || null;
-        return {
-          ...item,
-          variant,
-        };
-      });
-
       res.status(200).json({
         success: true,
-        data: orderObj,
+        data: order,
       });
     }
   );

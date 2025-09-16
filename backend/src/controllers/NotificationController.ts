@@ -18,7 +18,7 @@ export class NotificationController {
 
     const [notifications, total] = await Promise.all([
       Notification.find(filter)
-        .sort({ createdAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limit),
       Notification.countDocuments(filter),

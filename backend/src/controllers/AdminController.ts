@@ -108,10 +108,11 @@ export class AdminController {
   static approveTeacher = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;
+      const { feedback } = req.body;
 
       const teacher = await User.findOneAndUpdate(
         { _id: id, role: "teacher", isDeleted: false },
-        { approvalStatus: "approved" },
+        { approvalStatus: "approved", feedback },
         { new: true }
       );
 
@@ -130,10 +131,11 @@ export class AdminController {
   static rejectTeacher = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;
+      const { feedback } = req.body;
 
       const teacher = await User.findOneAndUpdate(
         { _id: id, role: "teacher", isDeleted: false },
-        { approvalStatus: "rejected" },
+        { approvalStatus: "rejected", feedback },
         { new: true }
       );
 
@@ -203,10 +205,11 @@ export class AdminController {
   static approveContent = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;
+      const { feedback } = req.body;
 
       const content = await Content.findOneAndUpdate(
         { _id: id, isDeleted: false },
-        { approvalStatus: "approved" },
+        { approvalStatus: "approved", feedback },
         { new: true }
       );
 
@@ -225,10 +228,11 @@ export class AdminController {
   static rejectContent = asyncHandler(
     async (req: AuthenticatedRequest, res: Response) => {
       const { id } = req.params;
+      const { feedback } = req.body;
 
       const content = await Content.findOneAndUpdate(
         { _id: id, isDeleted: false },
-        { approvalStatus: "rejected" },
+        { approvalStatus: "rejected", feedback },
         { new: true }
       );
 
@@ -342,6 +346,10 @@ export class AdminController {
         "image/webp",
         "video/mp4",
         "video/webm",
+        "video/mp3",
+        "audio/mpeg",
+        "audio/wav",
+        "audio/ogg",
         "video/quicktime",
         "application/pdf",
         "text/plain",

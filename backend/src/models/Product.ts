@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { Gender } from '../types';
+import { v4 as uuidv4 } from "uuid";
 
 export interface IProductVariant {
   name: string;
@@ -7,7 +8,7 @@ export interface IProductVariant {
   cutoffPrice?: number;
   stock: number;
   images?: string[];
-  
+  id: string
 }
 
 export interface IProduct extends Document {
@@ -38,8 +39,9 @@ const productVariantSchema = new Schema<IProductVariant>(
     cutoffPrice: { type: Number, min: 0 },
     stock: { type: Number, required: true, min: 0, default: 0 },
     images: [{ type: String }],
+    id: { type: String, required: true, default: uuidv4, immutable: true }
   },
-  { _id: true }
+  { _id: false }
 );
 
 const productSchema = new Schema<IProduct>(

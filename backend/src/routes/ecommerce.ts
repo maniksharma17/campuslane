@@ -69,7 +69,7 @@ router.patch('/orders/:id/cancel', requireAuth, validateParams(z.object({ id: mo
 
 // Admin order management
 router.patch('/admin/orders/:id/status', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), validateBody(z.object({
-  status: z.enum(['pending', 'paid', 'shipped', 'delivered', 'cancelled'])
+  status: z.enum(["pending", "confirmed", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"])
 })), EcommerceController.updateOrderStatus);
 
 // Wishlist

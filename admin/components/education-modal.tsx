@@ -22,6 +22,7 @@ import {
 import { uploadApi } from "@/lib/api";
 import axios from "axios";
 import { useAuthStore } from "@/lib/auth"; // ✅ import auth store
+import Image from "next/image";
 
 export type Field =
   | {
@@ -49,6 +50,14 @@ interface CommonModalProps {
   fileUploadAllowed: boolean;
 }
 
+type QuestionLocal = {
+  questionText: string;
+  options: string[]; // length 4
+  correctOption: number | null;
+  s3Key?: string;
+  file?: File | null;
+};
+
 export default function CommonModal({
   open,
   onClose,
@@ -68,13 +77,19 @@ export default function CommonModal({
   const [uploadProgress, setUploadProgress] = useState<{
     thumbnail?: number;
     file?: number;
+    [key: string]: number | undefined;
   }>({});
   const [fileSize, setFileSize] = useState<number | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [detectedType, setDetectedType] = useState<
     "file" | "video" | "image" | null
   >(null);
-  
+
+  // Quiz-specific
+  const [localQuizType, setLocalQuizType] = useState<string>(
+    (initialData && initialData.quizType) || "googleForm"
+  );
+  const [questions, setQuestions] = useState<QuestionLocal[]>([]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -110,25 +125,48 @@ export default function CommonModal({
   useEffect(() => {
     if (mode === "edit") {
       setFormData(initialData);
+      // initialize quizType and questions
+      setLocalQuizType(initialData?.quizType || "googleForm");
+
+      const initQuestions: QuestionLocal[] = (initialData?.questions || []).map(
+        (q: any) => ({
+          questionText: q.questionText || "",
+          options: q.options?.length === 4 ? q.options : ["", "", "", ""],
+          correctOption:
+            typeof q.correctOption === "number" ? q.correctOption : null,
+          s3Key: q.s3Key,
+          file: null,
+        })
+      );
+      console.log(initQuestions);
+      setQuestions(initQuestions);
     } else {
       setFormData({});
+      setLocalQuizType("googleForm");
+      setQuestions([]);
     }
     setThumbnail(null);
     setFile(null);
     setUploadProgress({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, initialData, open]);
 
   const handleChange = (name: string, value: any) => {
+    // keep quizType in sync
+    if (name === "quizType") {
+      setLocalQuizType(value);
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const uploadToS3 = async (file: File, type: "thumbnail" | "file") => {
+  const uploadToS3 = async (file: File) => {
     const { data } = await uploadApi.getPresignedUrl({
       contentType: file.type,
       fileSize: file.size,
       fileName: file.name,
     });
 
+    // simple upload (no complex progress handling here)
     await axios.put(data.data.url, file, {
       headers: { "Content-Type": file.type },
     });
@@ -136,12 +174,128 @@ export default function CommonModal({
     return data.data.key;
   };
 
+  // per-question file select
+  const handleQuestionFileSelect = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const selectedFile = e.target.files?.[0] || null;
+    setQuestions((prev) => {
+      const copy = [...prev];
+      copy[index] = {
+        ...copy[index],
+        file: selectedFile,
+        // clear existing s3Key to force re-upload if new file selected
+        s3Key: selectedFile ? undefined : copy[index].s3Key,
+      };
+      return copy;
+    });
+  };
+
+  const addQuestion = () => {
+    setQuestions((prev) => [
+      ...prev,
+      {
+        questionText: "",
+        options: ["", "", "", ""],
+        correctOption: null,
+        s3Key: undefined,
+        file: null,
+      },
+    ]);
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuestions((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateQuestionField = (
+    index: number,
+    field: keyof QuestionLocal,
+    value: any
+  ) => {
+    setQuestions((prev) => {
+      const copy = [...prev];
+      (copy[index] as any)[field] = value;
+      return copy;
+    });
+  };
+
+  const updateQuestionOption = (
+    qIndex: number,
+    optIndex: number,
+    value: string
+  ) => {
+    setQuestions((prev) => {
+      const copy = [...prev];
+      const q = { ...copy[qIndex] };
+      const newOptions = [...q.options];
+      newOptions[optIndex] = value;
+      q.options = newOptions;
+      copy[qIndex] = q;
+      return copy;
+    });
+  };
+
+  const validateQuiz = () => {
+    if (localQuizType === "googleForm") {
+      if (!formData.googleFormUrl || formData.googleFormUrl.trim() === "") {
+        alert("Google Form URL is required for external quizzes.");
+        return false;
+      }
+      // optional: rudimentary URL check
+      try {
+        // eslint-disable-next-line no-new
+        new URL(formData.googleFormUrl);
+      } catch {
+        alert("Please enter a valid Google Form URL.");
+        return false;
+      }
+    } else if (localQuizType === "native") {
+      if (!questions || questions.length === 0) {
+        alert("Add at least one question for native quiz.");
+        return false;
+      }
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i];
+        if (!q.questionText || q.questionText.trim() === "") {
+          alert(`Question ${i + 1}: question text is required.`);
+          return false;
+        }
+        if (!q.options || q.options.length !== 4) {
+          alert(`Question ${i + 1}: exactly 4 options are required.`);
+          return false;
+        }
+        for (let j = 0; j < 4; j++) {
+          if (!q.options[j] || q.options[j].trim() === "") {
+            alert(`Question ${i + 1}: option ${j + 1} is required.`);
+            return false;
+          }
+        }
+        if (
+          typeof q.correctOption !== "number" ||
+          q.correctOption < 0 ||
+          q.correctOption > 3
+        ) {
+          alert(`Question ${i + 1}: pick a correct option (1-4).`);
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
   const handleSubmit = async () => {
     try {
       // 🔹 Validate required fields
       if (mode !== "delete") {
         for (const field of fields) {
-          if (field.required && !formData[field.name]) {
+          // skip googleFormUrl validation here - handled by validateQuiz()
+          if (
+            field.required &&
+            field.name !== "googleFormUrl" &&
+            !formData[field.name]
+          ) {
             alert(`${field.label} is required.`);
             return; // stop submission
           }
@@ -152,6 +306,11 @@ export default function CommonModal({
           alert("Thumbnail is required.");
           return;
         }
+
+        // Quiz specific validation
+        if (title === "quiz" && !validateQuiz()) {
+          return;
+        }
       }
 
       setLoading(true);
@@ -160,15 +319,52 @@ export default function CommonModal({
       let uploadedFile: string | undefined;
 
       if (thumbnail) {
-        uploadedThumbnail = await uploadToS3(thumbnail, "thumbnail");
+        uploadedThumbnail = await uploadToS3(thumbnail);
       }
-      if (file) {
-        uploadedFile = await uploadToS3(file, "file");
+
+      if (file && fileUploadAllowed) {
+        uploadedFile = await uploadToS3(file);
+      }
+
+      // For native quiz: upload per-question files (if any)
+      const questionsToSend: any[] | undefined =
+        title === "quiz" && localQuizType === "native"
+          ? JSON.parse(JSON.stringify(questions)) // deep copy
+          : undefined;
+
+      if (questionsToSend) {
+        for (let i = 0; i < questionsToSend.length; i++) {
+          const qLocal = questions[i];
+          // if user selected a new file, upload it
+          if (qLocal.file) {
+            try {
+              const key = await uploadToS3(qLocal.file);
+              questionsToSend[i].s3Key = key;
+            } catch (err) {
+              console.error("Failed uploading question media", err);
+              alert("Failed uploading question media. Try again.");
+              setLoading(false);
+              return;
+            }
+          } else {
+            // preserve existing s3Key if present
+            if (qLocal.s3Key) {
+              questionsToSend[i].s3Key = qLocal.s3Key;
+            } else {
+              delete questionsToSend[i].s3Key;
+            }
+          }
+
+          // ensure correct types
+          questionsToSend[i].correctOption = Number(
+            questionsToSend[i].correctOption
+          );
+        }
       }
 
       const { admin } = useAuthStore.getState();
 
-      const finalData = {
+      const finalData: Record<string, any> = {
         ...formData,
         thumbnailKey:
           mode === "edit"
@@ -178,12 +374,14 @@ export default function CommonModal({
             : uploadedThumbnail,
         s3Key:
           mode === "edit"
-            ? file
-              ? uploadedFile
+            ? fileUploadAllowed
+              ? file
+                ? uploadedFile
+                : initialData.s3Key
               : initialData.s3Key
             : uploadedFile,
 
-        uploaderId: admin.id,
+        uploaderId: admin?.id,
         uploaderRole: "admin",
         approvalStatus: "approved",
         isAdminContent: true,
@@ -191,6 +389,15 @@ export default function CommonModal({
         fileSize,
         duration,
       };
+
+      // attach questions only when native quiz
+      if (title === "quiz" && localQuizType === "native") {
+        finalData.questions = questionsToSend;
+        finalData.quizType = "native";
+      } else if (title === "quiz" && localQuizType === "googleForm") {
+        finalData.quizType = "googleForm";
+        // ensure googleFormUrl present on finalData
+      }
 
       if (mode === "delete") {
         await onSubmit();
@@ -206,7 +413,7 @@ export default function CommonModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="min-w-[80vw] max-h-[80vh] overflow-y-scroll">
         <DialogHeader>
           <DialogTitle>
             {mode === "add" && `Add ${title}`}
@@ -222,57 +429,73 @@ export default function CommonModal({
           </p>
         ) : (
           <form className="space-y-4">
-            {fields.map((field) => (
-              <div key={field.name} className="space-y-1">
-                <Label>{field.label}</Label>
+            {fields.map((field) => {
+              // hide googleFormUrl input if quizType is native
+              if (
+                field.name === "googleFormUrl" &&
+                localQuizType === "native"
+              ) {
+                return null;
+              }
 
-                {field.type === "text" && (
-                  <Input
-                    type="text"
-                    required={field.required}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => handleChange(field.name, e.target.value)}
-                  />
-                )}
+              return (
+                <div key={field.name} className="space-y-1">
+                  <Label>{field.label}</Label>
 
-                {field.type === "number" && (
-                  <Input
-                    type="number"
-                    required={field.required}
-                    value={formData[field.name] || ""}
-                    onChange={(e) =>
-                      handleChange(field.name, Number(e.target.value))
-                    }
-                  />
-                )}
+                  {field.type === "text" && (
+                    <Input
+                      type="text"
+                      required={field.required}
+                      value={formData[field.name] || ""}
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                  )}
 
-                {field.type === "textarea" && (
-                  <Textarea
-                    required={field.required}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => handleChange(field.name, e.target.value)}
-                  />
-                )}
+                  {field.type === "number" && (
+                    <Input
+                      type="number"
+                      required={field.required}
+                      value={formData[field.name] || ""}
+                      onChange={(e) =>
+                        handleChange(field.name, Number(e.target.value))
+                      }
+                    />
+                  )}
 
-                {field.type === "select" && "options" in field && (
-                  <Select
-                    value={formData[field.name] || ""}
-                    onValueChange={(value) => handleChange(field.name, value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={`Select ${field.label}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            ))}
+                  {field.type === "textarea" && (
+                    <Textarea
+                      required={field.required}
+                      value={formData[field.name] || ""}
+                      onChange={(e) => handleChange(field.name, e.target.value)}
+                    />
+                  )}
+
+                  {field.type === "select" && "options" in field && (
+                    <Select
+                      value={formData[field.name] || localQuizType || ""}
+                      onValueChange={(value) => {
+                        handleChange(field.name, value);
+                        // specifically keep localQuizType in sync
+                        if (field.name === "quizType") {
+                          setLocalQuizType(value);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${field.label}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              );
+            })}
 
             {/* Thumbnail Upload */}
             <div className="space-y-1">
@@ -293,11 +516,11 @@ export default function CommonModal({
               )}
             </div>
 
-            {/* File Upload */}
+            {/* File Upload (top-level) */}
             {fileUploadAllowed && (
               <div className="space-y-1">
                 <Label>File</Label>
-                <Input type="file" onChange={handleFileSelect} required/>
+                <Input type="file" onChange={handleFileSelect} />
 
                 {uploadProgress.file !== undefined && (
                   <div className="h-2 bg-gray-200 rounded">
@@ -317,6 +540,151 @@ export default function CommonModal({
                     Math.floor(duration % 60)
                   ).padStart(2, "0")})`}
               </p>
+            )}
+
+            {/* Native quiz questions UI */}
+            {title === "quiz" && localQuizType === "native" && (
+              <div className="space-y-3 border-t pt-3">
+                <div className="flex items-center justify-between">
+                  <Label>Questions</Label>
+                  <Button type="button" size="sm" onClick={addQuestion}>
+                    + Add Question
+                  </Button>
+                </div>
+
+                {questions.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    No questions added yet.
+                  </p>
+                )}
+
+                {questions.map((q, qi) => (
+                  <div key={qi} className="p-3 border rounded space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium">Question {qi + 1}</div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => removeQuestion(qi)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Question Text</Label>
+                      <Input
+                        value={q.questionText || ""}
+                        onChange={(e) =>
+                          updateQuestionField(
+                            qi,
+                            "questionText",
+                            e.target.value
+                          )
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Optional media (image/audio)</Label>
+                      <Input
+                        type="file"
+                        accept="image/*,audio/*,video/*"
+                        onChange={(e) => handleQuestionFileSelect(qi, e)}
+                      />
+                      {q.s3Key &&
+                        !q.file &&
+                        (() => {
+                          const url = `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${q.s3Key}`;
+                          const ext = q.s3Key.split(".").pop()?.toLowerCase();
+
+                          if (!ext) return null;
+
+                          if (
+                            ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
+                          ) {
+                            // Image preview
+                            return (
+                              <Image
+                                height={100}
+                                width={100}
+                                src={url}
+                                alt="Question media"
+                                className="w-24 h-24 object-cover rounded border"
+                              />
+                            );
+                          }
+
+                          if (["mp3", "wav", "ogg"].includes(ext)) {
+                            // Audio preview
+                            return (
+                              <audio controls className="w-32">
+                                <source src={url} />
+                                Your browser does not support audio.
+                              </audio>
+                            );
+                          }
+
+                          if (["mp4", "webm", "mov"].includes(ext)) {
+                            // Video preview
+                            return (
+                              <video
+                                controls
+                                width={160}
+                                height={120}
+                                className="border rounded"
+                              >
+                                <source src={url} />
+                                Your browser does not support video.
+                              </video>
+                            );
+                          }
+
+                          // Fallback
+                          return (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 underline"
+                            >
+                              View File
+                            </a>
+                          );
+                        })()}
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label>Options (exactly 4)</Label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {q.options.map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`correct-${qi}`}
+                              checked={q.correctOption === oi}
+                              onChange={() =>
+                                updateQuestionField(qi, "correctOption", oi)
+                              }
+                            />
+                            <Input
+                              value={opt}
+                              onChange={(e) =>
+                                updateQuestionOption(qi, oi, e.target.value)
+                              }
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Select the radio for the correct option.
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </form>
         )}

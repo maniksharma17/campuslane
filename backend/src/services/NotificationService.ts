@@ -41,22 +41,33 @@ export class NotificationService {
     }
   }
 
-  static async notifyContentSubmission(contentId: mongoose.Types.ObjectId, contentTitle: string) {
-    const admins = await User.find({ role: 'admin' }).lean();
-    
-    const notifications = admins.map((admin) => ({
-      userId: admin._id,
-      role: 'admin' as UserRole,
-      type: 'content_pending',
-      title: 'Content Pending Approval',
-      body: `New content "${contentTitle}" is pending approval`,
-      meta: { contentId },
-    }));
+  static async notifyContentSubmission(
+  contentId: mongoose.Types.ObjectId,
+  contentTitle: string
+) {
+  const admins = await User.find({ role: "admin" }).lean();
 
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications);
-    }
+  for (const admin of admins) {
+    await Notification.findOneAndUpdate(
+      {
+        userId: admin._id,
+        role: "admin",
+        "meta.contentId": contentId, 
+      },
+      {
+        $set: {
+          type: "content_pending",
+          title: "Content Pending Approval",
+          body: `Content "${contentTitle}" is pending approval`,
+          meta: { contentId },
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true, new: true }
+    );
   }
+}
+
 
   static async notifyParentLinkRequest(studentId: mongoose.Types.ObjectId, parentName: string, linkId: mongoose.Types.ObjectId) {
     await this.createNotification({

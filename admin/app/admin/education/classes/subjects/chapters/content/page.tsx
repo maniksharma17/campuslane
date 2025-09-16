@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
@@ -18,6 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface QuestionItem {
+  questionText: string;
+  options: string[];
+  correctOption: number;
+  s3Key?: string;
+}
+
 interface ContentItem {
   _id: string;
   title: string;
@@ -27,7 +34,9 @@ interface ContentItem {
   fileUrl?: string;
   videoUrl?: string;
   type: "file" | "video" | "quiz" | "image";
+  quizType?: "native" | "googleForm";
   googleFormUrl?: string;
+  questions?: QuestionItem[];
   duration?: number;
   isAdminContent?: boolean;
   fileSize?: number;
@@ -55,14 +64,20 @@ export default function ContentPage() {
   const subjectId = searchParams.get("subjectId");
   const chapterId = searchParams.get("chapterId");
 
-  const [activeTab, setActiveTab] = useState<
-    "file" | "video" | "image" | "quiz"
-  >("file");
+  const [activeTab, setActiveTab] = useState<"file" | "video" | "image" | "quiz">("file");
+
+  // server-backed data
   const [allData, setAllData] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // server pagination state
   const [pagination, setPagination] = useState({ page: 1, limit: 10 });
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // search (debounced)
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit" | "delete">("add");
@@ -76,8 +91,18 @@ export default function ContentPage() {
     chapterName: "",
   });
 
-  const fetchContent = async () => {
+  // debounce searchQuery -> debouncedSearch
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // fetch content from server with pagination and filters
+  const { page, limit } = pagination;
+
+  const fetchContent = useCallback(async () => {
     if (!classId || !subjectId || !chapterId) return;
+
     setLoading(true);
     try {
       const res = await educationApi.getContent({
@@ -86,34 +111,46 @@ export default function ContentPage() {
         chapterId,
         isAdminContent: String(isAdminContent),
         type: activeTab,
+        page,
+        limit,
+        search: debouncedSearch || undefined,
       });
-      setAllData(res.data.data || []);
+
+      const items: ContentItem[] = res.data?.data || [];
+      const pg = res.data?.pagination || res.data?.meta?.pagination || null;
+
+      setAllData(items);
+
+      if (pg) {
+        setTotal(typeof pg.total === "number" ? pg.total : items.length);
+        setTotalPages(typeof pg.totalPages === "number" ? pg.pages : Math.max(1, Math.ceil((pg.total || items.length) / limit)));
+      } else {
+        // fallback: total = length of server page * unknown pages
+        setTotal(items.length);
+        setTotalPages(Math.max(1, Math.ceil(items.length / limit)));
+      }
+    } catch (err) {
+      console.error("Fetch content error:", err);
+      // optionally show toast or set error state
+      setAllData([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  };
+  }, [classId, subjectId, chapterId, isAdminContent, activeTab, page, limit, debouncedSearch]);
 
+  // re-fetch when relevant filters or pagination change
   useEffect(() => {
+    // If class/subject/chapter missing, do nothing
     fetchContent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, classId, subjectId, chapterId, isAdminContent]);
+  }, [fetchContent]);
 
-  // Filter + paginate
-  const filteredData = useMemo(() => {
-    const search = searchQuery.toLowerCase();
-    return allData.filter(
-      (item) =>
-        item.title.toLowerCase().includes(search) ||
-        item.description?.toLowerCase().includes(search)
-    );
-  }, [allData, searchQuery]);
-
-  const paginatedData = useMemo(() => {
-    const start = (pagination.page - 1) * pagination.limit;
-    return filteredData.slice(start, start + pagination.limit);
-  }, [filteredData, pagination]);
-
-  const totalPages = Math.ceil(filteredData.length / pagination.limit);
+  // reset page when activeTab or admin toggle changes
+  useEffect(() => {
+    setPagination((p) => ({ ...p, page: 1 }));
+  }, [activeTab, isAdminContent, debouncedSearch, classId, subjectId, chapterId]);
 
   const handleSubmit = async (values?: Record<string, any>) => {
     if (modalMode === "add") {
@@ -141,44 +178,42 @@ export default function ContentPage() {
     if (modalMode === "delete" && selectedItem) {
       await educationApi.deleteContent(selectedItem._id);
     }
+    // after change, refresh the current page
     fetchContent();
   };
 
   const handleContentTypeChange = (v: string) => {
     if (v === "admin") setIsAdminContent(true);
     else setIsAdminContent(false);
+    setPagination((p) => ({ ...p, page: 1 }));
   };
 
+  // Fields for modal
   const fields: Field[] = [
     { name: "title", label: "Title", type: "text", required: true },
     { name: "description", label: "Description", type: "textarea" },
     ...(activeTab === "quiz"
       ? ([
           {
-            name: "googleFormUrl",
-            label: "Google Form URL",
-            type: "text",
-            required: true,
-          },
-          {
             name: "quizType",
             label: "Quiz Type",
             type: "select",
             options: [
-              {
-                value: "native",
-                label: "Native Quiz",
-              },
-              {
-                value: "googleForm",
-                label: "External Quiz",
-              },
+              { value: "native", label: "Native Quiz" },
+              { value: "googleForm", label: "External Quiz" },
             ] as { value: string; label: string }[],
+          },
+          {
+            name: "googleFormUrl",
+            label: "Google Form URL",
+            type: "text",
+            required: false,
           },
         ] as const)
       : []),
   ];
 
+  // Columns unchanged, but DataTable will be fed server data + server pagination
   const columns = [
     {
       key: "thumbnailKey",
@@ -221,7 +256,37 @@ export default function ContentPage() {
       : []),
 
     ...(activeTab === "quiz"
-      ? [{ key: "googleFormUrl", title: "Google Form URL" }]
+      ? [
+          {
+            key: "quizType",
+            title: "Quiz Type",
+            render: (_: any, item: ContentItem) => <div>{item.quizType ?? "-"}</div>,
+          },
+          {
+            key: "questions",
+            title: "Questions",
+            render: (_: any, item: ContentItem) => (
+              <div>{item.questions ? `${item.questions.length} Qs` : "-"}</div>
+            ),
+          },
+          {
+            key: "googleFormUrl",
+            title: "Google Form URL",
+            render: (_: any, item: ContentItem) =>
+              item.googleFormUrl ? (
+                <a
+                  href={item.googleFormUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline"
+                >
+                  Open
+                </a>
+              ) : (
+                "-"
+              ),
+          },
+        ]
       : []),
     {
       key: "actions",
@@ -255,12 +320,18 @@ export default function ContentPage() {
     },
   ];
 
+  // UI helpers
+  const onSearch = (query: string) => {
+    setSearchQuery(query);
+    setPagination((p) => ({ ...p, page: 1 }));
+  };
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <div>{allData.length > 0 && <ContentBreadcrumb item={allData[0]} />}</div>
-        
+
           <div className="flex justify-between items-center">
             <div className="flex flex-row gap-4">
               <Button
@@ -283,6 +354,10 @@ export default function ContentPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="ml-4 text-sm text-muted-foreground">
+              Showing {total} result{total !== 1 ? "s" : ""} — page {pagination.page} of {totalPages}
+            </div>
           </div>
         </div>
 
@@ -290,7 +365,7 @@ export default function ContentPage() {
           value={activeTab}
           onValueChange={(val) => {
             setActiveTab(val as any);
-            setPagination({ page: 1, limit: 10 });
+            setPagination({ page: 1, limit: pagination.limit });
           }}
         >
           <TabsList>
@@ -302,21 +377,18 @@ export default function ContentPage() {
 
           <TabsContent value={activeTab}>
             <DataTable<ContentItem>
-              data={paginatedData}
+              data={allData}
               columns={columns}
               loading={loading}
               pagination={{
                 page: pagination.page,
                 limit: pagination.limit,
-                total: filteredData.length,
+                total,
                 totalPages,
               }}
               onPageChange={(page) => setPagination((p) => ({ ...p, page }))}
               onLimitChange={(limit) => setPagination({ page: 1, limit })}
-              onSearch={(query) => {
-                setSearchQuery(query);
-                setPagination((p) => ({ ...p, page: 1 }));
-              }}
+              onSearch={onSearch}
             />
           </TabsContent>
         </Tabs>
@@ -341,7 +413,6 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 

@@ -21,7 +21,7 @@ export default function ContentGrid({ contents }: { contents: ContentItem[] }) {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {contents.map((c) => (
         <ContentCard key={c._id} content={c} />
       ))}

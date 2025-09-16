@@ -19,7 +19,7 @@ export type ContentType = 'file' | 'video' | 'quiz' | 'game' | 'image';
 
 export type ProgressStatus = 'not_started' | 'in_progress' | 'completed';
 
-export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+export type OrderStatus = 'pending' | 'confirmed' | 'packed' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled';
 
 export type PaymentType = 'COD' | 'Razorpay';
 

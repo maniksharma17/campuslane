@@ -40,7 +40,15 @@ export type Field =
       required?: boolean;
     };
 
-type ContentTypeString = "file" | "video" | "quiz" | "game" | "image";
+type ContentTypeString = "file" | "video" | "quiz" | "image";
+
+interface Question {
+  questionText: string;
+  options: string[];
+  correctOption: number | null;
+  s3Key?: string;
+  file?: File | null;
+}
 
 interface CommonModalProps {
   open: boolean;
@@ -54,13 +62,7 @@ interface CommonModalProps {
   defaultType?: ContentTypeString;
 }
 
-const CONTENT_TYPES: ContentTypeString[] = [
-  "file",
-  "video",
-  "quiz",
-  "game",
-  "image",
-];
+const CONTENT_TYPES: ContentTypeString[] = ["file", "video", "quiz", "image"];
 
 export default function CommonModal({
   open,
@@ -79,10 +81,10 @@ export default function CommonModal({
   // Upload states
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<{
-    thumbnail?: number;
-    file?: number;
-  }>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
+    {}
+  );
+
   const [fileSize, setFileSize] = useState<number | null>(null);
   const [duration, setDuration] = useState<number | null>(null);
   const [detectedType, setDetectedType] = useState<ContentTypeString | null>(
@@ -90,8 +92,9 @@ export default function CommonModal({
   );
 
   // chosen content type tab inside modal
-  const [selectedType, setSelectedType] =
-    useState<ContentTypeString>(initialData?.type || defaultType);
+  const [selectedType, setSelectedType] = useState<ContentTypeString>(
+    initialData?.type || defaultType
+  );
 
   // local error text
   const [localError, setLocalError] = useState<string | null>(null);
@@ -101,9 +104,22 @@ export default function CommonModal({
     if (mode === "edit") {
       setFormData({
         ...initialData,
-        tags: initialData?.tags ? (initialData.tags as string[]).join(", ") : "",
+        tags: initialData?.tags
+          ? (initialData.tags as string[]).join(", ")
+          : "",
       });
       setSelectedType((initialData?.type as ContentTypeString) || defaultType);
+      const initQs: Question[] = (initialData?.questions || []).map(
+        (q: any) => ({
+          questionText: q.questionText || "",
+          options: q.options?.length === 4 ? q.options : ["", "", "", ""],
+          correctOption:
+            typeof q.correctOption === "number" ? q.correctOption : null,
+          s3Key: q.s3Key, // existing uploaded key
+          file: null, // no local file initially
+        })
+      );
+      setQuestions(initQs);
     } else {
       setFormData({});
       setSelectedType(defaultType);
@@ -187,7 +203,9 @@ export default function CommonModal({
         onClose();
       } catch (err: any) {
         console.error(err);
-        setLocalError(err?.response?.data?.message || err.message || "Delete failed");
+        setLocalError(
+          err?.response?.data?.message || err.message || "Delete failed"
+        );
       } finally {
         setLoading(false);
       }
@@ -219,7 +237,8 @@ export default function CommonModal({
 
       // upload file if provided (or required)
       const typeToUse: ContentTypeString =
-        (detectedType as ContentTypeString) || (selectedType as ContentTypeString);
+        (detectedType as ContentTypeString) ||
+        (selectedType as ContentTypeString);
 
       // If there's a file selected and file uploads are allowed, upload it
       if (file && fileUploadAllowed) {
@@ -228,7 +247,8 @@ export default function CommonModal({
 
       // Prepare final metadata to pass up to parent (parent will call /content)
       const authState = useAuthStore.getState();
-      const uploaderId = authState.user?._id || authState.user?._id || undefined;
+      const uploaderId =
+        authState.user?._id || authState.user?._id || undefined;
       const uploaderRole = authState.user?.role || "teacher";
 
       const finalData: Record<string, any> = {
@@ -238,13 +258,15 @@ export default function CommonModal({
         thumbnailKey: uploadedThumbnail,
         s3Key: uploadedFileKey,
         fileSize: fileSize ?? initialData.fileSize,
-        duration: (detectedType === "video") ? duration ?? initialData.duration : 0,
+        duration:
+          detectedType === "video" ? duration ?? initialData.duration : 0,
         uploaderId: formData.uploaderId || uploaderId,
         uploaderRole: formData.uploaderRole || uploaderRole,
-        approvalStatus:
-          formData.approvalStatus ||
-          "pending",
+        approvalStatus: formData.approvalStatus || "pending",
         isAdminContent: false,
+        ...(selectedType === "quiz" && formData.quizType === "native"
+          ? { questions }
+          : {}),
       };
 
       // Normalize tags -> array
@@ -271,6 +293,39 @@ export default function CommonModal({
         }
       }
 
+      // If native quiz, upload each question file (if present) and set s3Key
+      if (selectedType === "quiz" && formData.quizType === "native") {
+        // iterate sequentially to avoid overwhelming presign endpoint; you can parallelize if you want
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          if (q.file instanceof File) {
+            try {
+              // optionally show progress per-question (here we reuse 'file' progress key with suffix)
+              setUploadProgress((prev) => ({ ...prev, [`q${i}`]: 0 }));
+              const key = await uploadToS3(q.file, "file");
+              // set returned key and clear local file
+              q.s3Key = key;
+              q.file = null;
+              setUploadProgress((prev) => {
+                const copy = { ...prev };
+                delete copy[`q${i}`];
+                return copy;
+              });
+            } catch (err) {
+              console.error("Question file upload failed for question", i, err);
+              throw err; // bubble up - will show localError below
+            }
+          }
+        }
+        // attach questions (now with s3Key values) to finalData
+        finalData.questions = questions.map((q) => ({
+          questionText: q.questionText,
+          options: q.options,
+          correctOption: q.correctOption,
+          s3Key: q.s3Key,
+        }));
+      }
+
       // Call parent onSubmit with final metadata (parent will call /content)
       await onSubmit(finalData);
       onClose();
@@ -289,10 +344,24 @@ export default function CommonModal({
     if (type === "video") {
       return (
         <>
-            
           <div>
             <Label>Video File</Label>
             <Input type="file" accept="video/*" onChange={handleFileSelect} />
+          </div>
+        </>
+      );
+    }
+
+    if (type === "file") {
+      return (
+        <>
+          <div>
+            <Label>Upload any file (PDF, Word, Excel, PPT)</Label>
+            <Input
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={handleFileSelect}
+            />
           </div>
         </>
       );
@@ -305,14 +374,14 @@ export default function CommonModal({
             <Label>Quiz Type</Label>
             <Select
               value={formData.quizType || ""}
-              onValueChange={(value) => handleChange("quizType", value)}
+              onValueChange={(v) => handleChange("quizType", v)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select quiz type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="googleForm">Google Form</SelectItem>
-                <SelectItem value="native">Native (JSON)</SelectItem>
+                <SelectItem value="native">Native Quiz</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -324,18 +393,101 @@ export default function CommonModal({
                 type="text"
                 value={formData.googleFormUrl || ""}
                 onChange={(e) => handleChange("googleFormUrl", e.target.value)}
-                placeholder="https://forms.gle/..."
               />
             </div>
           )}
 
           {formData.quizType === "native" && (
-            <div>
-              <Label>Quiz JSON</Label>
-              <Input type="file" accept="application/json" onChange={handleFileSelect} />
-              <p className="text-sm text-muted-foreground mt-1">
-                Upload a JSON file containing the quiz payload.
-              </p>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <Label className="font-medium">Questions</Label>
+                <Button type="button" size="sm" onClick={addQuestion}>
+                  + Add Question
+                </Button>
+              </div>
+
+              {questions.map((q, qi) => (
+                <div
+                  key={qi}
+                  className="border rounded-lg p-3 space-y-3 bg-slate-50"
+                >
+                  <div className="flex justify-between">
+                    <span className="font-medium">Question {qi + 1}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeQuestion(qi)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+
+                  {/* Question Text */}
+                  <div>
+                    <Label>Text</Label>
+                    <Input
+                      value={q.questionText}
+                      onChange={(e) =>
+                        updateQuestion(qi, "questionText", e.target.value)
+                      }
+                    />
+                  </div>
+
+                  {/* File Upload for this question */}
+                  <div>
+                    <Label>Attach Media (optional)</Label>
+                    <Input
+                      type="file"
+                      accept="image/*,audio/*,video/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        updateQuestion(qi, "file", file);
+                      }}
+                    />
+
+                    {/* Show preview if uploaded OR already exists */}
+                    <div className="mt-2">
+                      {q.file && (
+                        <p className="text-sm text-gray-500">
+                          {q.file.name} (
+                          {(q.file.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      )}
+                      {renderPreview(q.s3Key)}
+                    </div>
+                  </div>
+
+                  {/* Options */}
+                  <div>
+                    <Label>Options</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {q.options.map((opt, oi) => (
+                        <div key={oi} className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name={`correct-${qi}`}
+                            checked={q.correctOption === oi}
+                            onChange={() =>
+                              updateQuestion(qi, "correctOption", oi)
+                            }
+                          />
+                          <Input
+                            value={opt}
+                            onChange={(e) =>
+                              updateOption(qi, oi, e.target.value)
+                            }
+                            placeholder={`Option ${oi + 1}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Select the radio button to mark the correct answer.
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>
@@ -353,18 +505,74 @@ export default function CommonModal({
       );
     }
 
-    if (type === "game" || type === "file") {
+    return null;
+  };
+
+  const [questions, setQuestions] = useState<Question[]>([]);
+
+  // --- Add / Remove / Update questions ---
+  const addQuestion = () => {
+    setQuestions((prev) => [
+      ...prev,
+      { questionText: "", options: ["", "", "", ""], correctOption: null },
+    ]);
+  };
+
+  const removeQuestion = (idx: number) =>
+    setQuestions((prev) => prev.filter((_, i) => i !== idx));
+
+  const updateQuestion = (idx: number, field: keyof Question, value: any) => {
+    setQuestions((prev) => {
+      const copy = [...prev];
+      (copy[idx] as any)[field] = value;
+      return copy;
+    });
+  };
+
+  const updateOption = (qIdx: number, optIdx: number, value: string) => {
+    setQuestions((prev) => {
+      const copy = [...prev];
+      const opts = [...copy[qIdx].options];
+      opts[optIdx] = value;
+      copy[qIdx].options = opts;
+      return copy;
+    });
+  };
+
+  // --- File preview by type ---
+  const renderPreview = (key?: string) => {
+    if (!key) return null;
+    const url = `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${key}`;
+    const ext = key.split(".").pop()?.toLowerCase();
+    if (!ext) return null;
+
+    if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
       return (
-        <>
-          <div>
-            <Label>File</Label>
-            <Input type="file" onChange={handleFileSelect} />
-          </div>
-        </>
+        <Image
+          width={100}
+          height={100}
+          src={url}
+          alt="preview"
+          className="w-24 h-24 object-cover rounded"
+        />
       );
     }
-
-    return null;
+    if (["mp3", "wav", "ogg"].includes(ext)) {
+      return <audio controls src={url} className="w-32" />;
+    }
+    if (["mp4", "mov", "webm"].includes(ext)) {
+      return <video controls src={url} className="w-40 h-28 rounded" />;
+    }
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="text-blue-600 underline"
+      >
+        View File
+      </a>
+    );
   };
 
   return (
@@ -479,7 +687,11 @@ export default function CommonModal({
                     <Image
                       width={200}
                       height={200}
-                      src={typeof initialData.thumbnailKey === "string" ? `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${initialData.thumbnailKey}` : ""}
+                      src={
+                        typeof initialData.thumbnailKey === "string"
+                          ? `${process.env.NEXT_PUBLIC_AWS_STORAGE_URL}/${initialData.thumbnailKey}`
+                          : ""
+                      }
                       alt="existing-thumb"
                       className="h-24 rounded object-cover"
                     />
@@ -491,7 +703,8 @@ export default function CommonModal({
               {file && (
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    File: {file.name} • {((fileSize ?? 0) / (1024 * 1024)).toPrecision(2)} MB
+                    File: {file.name} •{" "}
+                    {((fileSize ?? 0) / (1024 * 1024)).toPrecision(2)} MB
                   </p>
                   {uploadProgress.file !== undefined && (
                     <div className="mt-2 h-2 bg-slate-200 rounded">
@@ -520,12 +733,20 @@ export default function CommonModal({
 
           <div className="flex items-center gap-2">
             {mode === "delete" ? (
-              <Button variant="destructive" onClick={handleSubmit} disabled={loading}>
+              <Button
+                variant="destructive"
+                onClick={handleSubmit}
+                disabled={loading}
+              >
                 {loading ? "Deleting..." : "Delete"}
               </Button>
             ) : (
               <Button onClick={handleSubmit} disabled={loading}>
-                {loading ? "Processing..." : mode === "edit" ? "Save changes" : "Upload"}
+                {loading
+                  ? "Processing..."
+                  : mode === "edit"
+                  ? "Save changes"
+                  : "Upload"}
               </Button>
             )}
           </div>

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from "zod";
 import { ContentController } from '../controllers/ContentController';
-import { requireAdminAuth, requireAnyAuth, requireAuth, requireRole, requireTeacherApproval } from '../middleware/auth';
+import { optionalAuth, requireAdminAuth, requireAnyAuth, requireAuth, requireRole, requireTeacherApproval } from '../middleware/auth';
 import { validateBody, validateQuery, validateParams } from '../middleware/validation';
 import { 
   createClassSchema, 
@@ -39,7 +39,7 @@ router.patch('/chapters/:id', requireAdminAuth, validateParams(z.object({ id: mo
 router.delete('/chapters/:id', requireAdminAuth, validateParams(z.object({ id: mongoIdSchema })), ContentController.deleteChapter);
 
 // Content
-router.get('/content', validateQuery(paginationSchema.extend({
+router.get('/content', optionalAuth, validateQuery(paginationSchema.extend({
   classId: mongoIdSchema.optional(),
   subjectId: mongoIdSchema.optional(),
   chapterId: mongoIdSchema.optional(),
@@ -65,5 +65,11 @@ router.post('/content', requireAnyAuth, validateBody(createContentSchema), Conte
 router.patch('/content/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), validateBody(updateContentSchema), ContentController.updateContent);
 
 router.delete('/content/:id', requireAnyAuth, validateParams(z.object({ id: mongoIdSchema })), ContentController.deleteContent);
+
+
+// Bookmarks
+router.get('/bookmarks', requireAuth, ContentController.getBookmark);
+router.post('/bookmarks', requireAuth, validateBody(z.object({ contentId: mongoIdSchema })), ContentController.addToBookmark);
+router.delete('/bookmarks/:contentId', requireAuth, validateParams(z.object({ contentId: mongoIdSchema })), ContentController.removeFromBookmark);
 
 export default router;

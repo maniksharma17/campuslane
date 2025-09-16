@@ -93,9 +93,9 @@ export default function ProductModal({
   >([]);
 
   // Additional details state
-  const [gender, setGender] = useState<
-    "Boys" | "Girls" | "Unisex" | undefined
-  >((initialData.gender as any) ?? undefined);
+  const [gender, setGender] = useState<"Boys" | "Girls" | "Unisex" | undefined>(
+    (initialData.gender as any) ?? undefined
+  );
   const [classLevel, setClassLevel] = useState<string | undefined>(
     initialData.classLevel ?? undefined
   );
@@ -149,10 +149,10 @@ export default function ProductModal({
       setDescription(initialData.description ?? "");
       setCategory(
         initialData.category
-      ? typeof initialData.category === "object"
-        ? String((initialData.category as { _id: any })._id)
-        : String(initialData.category)
-      : undefined
+          ? typeof initialData.category === "object"
+            ? String((initialData.category as { _id: any })._id)
+            : String(initialData.category)
+          : undefined
       );
       setExistingImages(initialData.images ?? []);
       setImagesFiles([]);
@@ -414,7 +414,7 @@ export default function ProductModal({
             v.cutoffPrice !== undefined ? Number(v.cutoffPrice) : undefined,
           stock: Number(v.stock),
           images: finalVariantImages,
-          _id: (v as any)._id,
+          id: (v as any).id,
         } as IProductVariant;
       });
       const finalVariants = await Promise.all(variantPromises);

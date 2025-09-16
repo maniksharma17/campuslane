@@ -14,7 +14,7 @@ import { Heart, ShoppingCart, ArrowLeft } from "lucide-react";
 
 // --- Types ---
 type Variant = {
-  _id?: string;
+  id?: string;
   name: string;
   price: number;
   cutoffPrice?: number;
@@ -169,7 +169,7 @@ export default function ProductDetailPage(): JSX.Element {
     try {
       await api.post("/cart/items", {
         productId: product._id,
-        variantId: selectedVariant._id,
+        variantId: selectedVariant.id,
         quantity,
         price: selectedVariant.price,
       });
@@ -440,7 +440,7 @@ export default function ProductDetailPage(): JSX.Element {
                   <div className="flex flex-wrap gap-2">
                     {product.variants.map((v, idx) => (
                       <button
-                        key={v._id || idx}
+                        key={v.id || idx}
                         onClick={() => {
                           setSelectedVariantIndex(idx);
                           setQuantity(1);

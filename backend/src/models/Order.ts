@@ -1,11 +1,18 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { OrderStatus, PaymentType, PaymentStatus } from '../types';
+import mongoose, { Schema, Document } from "mongoose";
+import { OrderStatus, PaymentType, PaymentStatus } from "../types";
+
+export interface IVariantItem {
+  name: string;
+  price: number;
+  images: string[];
+}
 
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
-  variantId: mongoose.Types.ObjectId;
+  variantId: string;
   quantity: number;
   price: number;
+  variant: IVariantItem;
 }
 
 export interface IShippingAddress {
@@ -35,12 +42,27 @@ export interface IOrder extends Document {
   __v?: number;
 }
 
+const variantItemSchema = new Schema<IVariantItem>({
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  images: [
+    {
+      type: String,
+    },
+  ],
+});
+
 const orderItemSchema = new Schema<IOrderItem>(
   {
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-    variantId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    variantId: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true, min: 0 },
+    variant: variantItemSchema,
   },
   { _id: true }
 );
@@ -61,26 +83,30 @@ const shippingAddressSchema = new Schema<IShippingAddress>(
 
 const orderSchema = new Schema<IOrder>(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     items: [orderItemSchema],
     totalAmount: { type: Number, required: true, min: 0 },
-    status: { 
-      type: String, 
-      enum: ['pending', 'paid', 'shipped', 'delivered', 'cancelled'], 
-      default: 'pending',
-      required: true 
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "packed", "shipped", "out_for_delivery", "delivered", "cancelled"],
+      default: "pending",
+      required: true,
     },
     shippingAddress: { type: shippingAddressSchema, required: true },
-    paymentType: { 
-      type: String, 
-      enum: ['COD', 'Razorpay'], 
-      required: true 
+    paymentType: {
+      type: String,
+      enum: ["COD", "Razorpay"],
+      required: true,
     },
-    paymentStatus: { 
-      type: String, 
-      enum: ['pending', 'success', 'failed'], 
-      default: 'pending',
-      required: true 
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "success", "failed"],
+      default: "pending",
+      required: true,
     },
     paymentId: { type: String },
     deliveryRate: { type: Number, default: 0, min: 0 },
@@ -89,7 +115,7 @@ const orderSchema = new Schema<IOrder>(
   {
     timestamps: true,
     toJSON: {
-      transform: function(_doc, ret) {
+      transform: function (_doc, ret) {
         delete ret.__v;
         return ret;
       },
@@ -101,4 +127,4 @@ orderSchema.index({ userId: 1, status: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
 
-export const Order = mongoose.model<IOrder>('Order', orderSchema);
+export const Order = mongoose.model<IOrder>("Order", orderSchema);

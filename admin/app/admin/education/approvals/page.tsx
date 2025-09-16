@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Eye } from "lucide-react";
 import { DataTable } from "@/components/ui/data-table";
-import {api} from "@/lib/api";
+import { api } from "@/lib/api";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export interface ContentItem {
@@ -33,58 +33,46 @@ export default function TeacherContentPage() {
   const subjectId = searchParams.get("subjectId");
   const chapterId = searchParams.get("chapterId");
 
-  const [contentData, setContentData] = useState<ContentItem[]>([]);
+  const [data, setData] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0,
-  });
 
-  const fetchContent = async () => {
+  // server pagination + filters
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const fetchContent = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get("/teacher/content", {
         params: {
-          classId,
-          subjectId,
-          chapterId,
           includeDeleted: false,
+          page,
+          limit,
+          search: searchQuery || undefined,
         },
       });
-      setContentData(res.data.data || []);
-      setPagination(res.data.pagination || {
-        page: 1,
-        limit: 10,
-        total: res.data.data?.length || 0,
-        pages: 1,
-      });
+
+      setData(res.data?.data || []);
+
+      const pg = res.data?.pagination || {};
+      setTotal(pg.total || 0);
+      setTotalPages(pg.pages || 1);
     } catch (err: any) {
       console.error("fetch content error:", err);
-      setContentData([]);
+      setData([]);
+      setTotal(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, searchQuery]);
 
   useEffect(() => {
     fetchContent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [classId, subjectId, chapterId]);
-
-  const filteredData = contentData.filter((item) =>
-    searchQuery
-      ? item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (item.description || "")
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (item.tags || []).some((tag) =>
-          tag.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : true
-  );
+  }, [fetchContent]);
 
   return (
     <AdminLayout>
@@ -92,7 +80,7 @@ export default function TeacherContentPage() {
         <h1 className="text-2xl font-bold">Teacher Content</h1>
 
         <DataTable<ContentItem>
-          data={filteredData.filter((item) => item.uploaderRole !== "admin")}
+          data={data.filter((item) => item.uploaderRole !== "admin")}
           columns={[
             { key: "title", title: "Title", sortable: true },
             { key: "type", title: "Type" },
@@ -128,7 +116,9 @@ export default function TeacherContentPage() {
                     size="sm"
                     variant="default"
                     onClick={() =>
-                      router.push(`/admin/education/approvals/detail?id=${item._id}`)
+                      router.push(
+                        `/admin/education/approvals/detail?id=${item._id}`
+                      )
                     }
                     title="View Content"
                   >
@@ -140,20 +130,19 @@ export default function TeacherContentPage() {
           ]}
           loading={loading}
           pagination={{
-            page: pagination.page,
-            limit: pagination.limit,
-            total: pagination.total,
-            totalPages: pagination.pages,
+            page,
+            limit,
+            total,
+            totalPages,
           }}
-          onPageChange={(page) =>
-            setPagination((p) => ({ ...p, page }))
-          }
-          onLimitChange={(limit) =>
-            setPagination((p) => ({ ...p, limit, page: 1 }))
-          }
+          onPageChange={(p: number) => setPage(p)}
+          onLimitChange={(newLimit) => {
+            setLimit(newLimit);
+            setPage(1);
+          }}
           onSearch={(q) => {
             setSearchQuery(q);
-            setPagination((p) => ({ ...p, page: 1 }));
+            setPage(1);
           }}
         />
       </div>

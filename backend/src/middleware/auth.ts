@@ -101,6 +101,20 @@ export const requireAdminAuth = async (
   }
 };
 
+export const optionalAuth = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return next(); // no user → continue as guest
+
+  try {
+    const decoded = verifyToken(token);
+    req.user = decoded; // attach user
+  } catch (err) {
+    // invalid token → ignore and continue as guest
+  }
+  next();
+};
+
+
 export const requireRole = (roles: UserRole | UserRole[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const userRoles = Array.isArray(roles) ? roles : [roles];
