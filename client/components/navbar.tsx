@@ -152,6 +152,8 @@ export default function Navbar() {
                   <ChevronDown className="h-4 w-4 text-gray-500" />
                 </button>
 
+                
+
                 {profileOpen && (
                   <div className="absolute right-0 mt-2 w-44 bg-white rounded-2xl shadow-lg border border-gray-100 py-2 z-40">
                     <Link href="/profile">
@@ -172,10 +174,20 @@ export default function Navbar() {
                     >
                       Logout
                     </button>
+                    
                   </div>
+                  
                 )}
+                
               </div>
             )}
+
+            <Link href={"/shop/products"}>
+              <Button className="rounded-full">
+                  STORE
+              </Button>
+            </Link>
+            
           </div>
 
           {/* Mobile Menu Button */}

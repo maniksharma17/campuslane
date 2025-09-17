@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import ContentCard from "@/components/content/ContentCard";
+import Link from "next/link";
 
 export interface Question {
   questionText: string;
@@ -328,7 +329,7 @@ export default function ContentPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 w-full px-5">
+      <main className="min-h-screen bg-neutral-100 w-full px-5">
         <Navbar />
         <div className="w-full max-w-screen-xl mx-auto lg:pt-36 px-3">
           <div className="flex items-center justify-center">
@@ -351,7 +352,7 @@ export default function ContentPage() {
 
   if (!content) {
     return (
-      <main className="min-h-screen bg-slate-50 w-full px-5">
+      <main className="min-h-screen bg-neutral-100 w-full px-5">
         <Navbar />
         <div className="w-full max-w-screen-xl mx-auto lg:py-24 px-3">
           <div className="bg-white rounded-2xl p-8 shadow">
@@ -377,7 +378,7 @@ export default function ContentPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 w-full px-5">
+    <main className="min-h-screen bg-neutral-50 w-full px-5">
       <Navbar />
 
       <div className="w-full max-w-screen-xl mx-auto pt-6 lg:pt-24 pb-12">
@@ -392,7 +393,7 @@ export default function ContentPage() {
                   <Button
                     variant={"outline"}
                     onClick={() => router.back()}
-                    className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-300 rounded-md px-2 py-1"
+                    className="inline-flex items-center gap-2 focus:outline-none rounded-md px-2 py-1"
                     aria-label="Go back"
                   >
                     <ArrowLeft className="h-5 w-5" />
@@ -400,11 +401,11 @@ export default function ContentPage() {
                   </Button>
 
                   <div className="ml-2 sm:ml-0">
-                    <h1 className="mt-4 text-2xl md:text-3xl font-semibold text-slate-900 leading-tight">
+                    <h1 className="mt-4 text-2xl md:text-5xl font-semibold text-black leading-tight">
                       {content.title}
                     </h1>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-black/80">
                       <span className="inline-flex items-center gap-2 uppercase">
                         <FileText className="h-4 w-4" />{" "}
                         {content.type ?? "file"}
@@ -412,7 +413,7 @@ export default function ContentPage() {
                       {content.createdAt && (
                         <>
                           <span>•</span>
-                          <time className="text-xs text-gray-800 font-medium">
+                          <time className="text-xs text-black/80 font-medium">
                             {new Date(content.createdAt).toLocaleDateString()}
                           </time>
                         </>
@@ -503,12 +504,12 @@ export default function ContentPage() {
               </div>
 
               {/* Related content (large grid, same-height cards) */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+              <div className="p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-slate-800">
+                  <h3 className="text-xl font-medium text-black/80">
                     Related content
                   </h3>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-black/70">
                     Top picks for you
                   </div>
                 </div>
@@ -524,7 +525,7 @@ export default function ContentPage() {
 
           {/* RIGHT: Sidebar (sticky) */}
           <aside className="col-span-1 lg:col-span-4">
-            <div className="sticky top-[88px] space-y-6">
+            <div className="sticky top-[90px] space-y-2">
               {/* Quick actions & progress */}
               <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
                 <h4 className="text-sm font-medium text-slate-800">
@@ -591,7 +592,36 @@ export default function ContentPage() {
                   </div>
                 </div>}
               </div>
+              <aside className="h-auto mt-4 lg:col-span-2 relative">
+                      <div className="space-y-2">
+                        <Link href="/fun-break">
+                        <Image
+                          src={"/folder/fun-break.png"}
+                          alt="Fun Break"
+                          width={100}
+                          height={100}
+                          className="object-contain border border-gray-300 bg-yellow-100 h-full w-full rounded-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+                        />
+                        </Link>
+                        
+                        <Image
+                          src={"/folder/interactive-games.png"}
+                          alt="Fun Break"
+                          width={100}
+                          height={100}
+                          className="object-contain border border-gray-300 bg-purple-200 h-full w-full rounded-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+                        />
+                        <Image
+                          src={"/folder/study-downloads.png"}
+                          alt="Fun Break"
+                          width={100}
+                          height={100}
+                          className="object-contain border border-gray-300 bg-white h-full w-full rounded-xl hover:scale-105 transition-all duration-300 cursor-pointer"
+                        />
+                      </div>
+                    </aside>
             </div>
+            
           </aside>
         </div>
       </div>

@@ -709,21 +709,24 @@ export class EcommerceController {
       const { paymentType, shippingAddress, deliveryRate, freeShipping } =
         req.body;
 
+      console.log(req.body)
+
       // Get cart
       const cart = await Cart.findOne({ userId }).populate("items.productId");
       if (!cart || cart.items.length === 0) {
         throw new ValidationError("Cart is empty");
       }
-
+      console.log(cart)
       // Transform cart items → order items with variant snapshot
       const orderItems = cart.items.map((item: any) => {
         const product: any = item.productId;
+        console.log(product);
         if (!product) {
           throw new NotFoundError("Product not found for cart item");
         }
-
+        
         const variant = product.variants.find(
-          (v: any) => v._id.toString() === item.variantId.toString()
+          (v: any) => v.id.toString() === item.variantId.toString()
         );
 
         if (!variant) {
@@ -732,7 +735,7 @@ export class EcommerceController {
 
         return {
           productId: product._id,
-          variantId: variant._id,
+          variantId: variant.id,
           quantity: item.quantity,
           price: variant.price, // store latest variant price
           variant: {

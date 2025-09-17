@@ -11,11 +11,11 @@ import Navbar from "@/components/navbar";
 import ContentGrid from "@/components/content/ContentGrid";
 import api from "@/lib/api";
 import ThreeDotsSpinner from "@/components/ui/spinner";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 type ContentItem = {
   _id: string;
@@ -170,7 +170,6 @@ export default function ExplorePage() {
     ]
   );
 
-  // --- Fetch contents whenever filters/search/page/debouncedQuery changes ---
   // --- Fetch contents ---
   const fetchPage = useCallback(
     async (pageNum: number) => {
@@ -243,7 +242,7 @@ export default function ExplorePage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-primary pt-20">
+    <main className="relative min-h-screen bg-neutral-100 pt-20">
       <Navbar />
       <div className="max-w-screen mx-auto px-6 lg:px-16 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* RIGHT SECTION: filters + search + content */}
@@ -345,32 +344,30 @@ export default function ExplorePage() {
             </button>
 
             <div className="bg-gray-50 border w-full rounded-2xl p-2 px-4 flex items-center gap-3">
-            <Search className="h-7 w-7 text-slate-300" />
-            <input
-              placeholder="Search content by title, description..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-gray-50 border-0 py-2 placeholder:text-normal lg:placeholder:text-lg lg:text-lg focus:outline-none focus:ring-0 focus:ring-offset-0 focus:border-0"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") immediateSearch();
-              }}
-            />
-            {searchQuery ? (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setDebouncedQuery("");
+              <Search className="h-7 w-7 text-slate-300" />
+              <input
+                placeholder="Search content by title, description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-gray-50 border-0 py-2 placeholder:text-normal lg:placeholder:text-lg lg:text-lg focus:outline-none focus:ring-0 focus:ring-offset-0 focus:border-0"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") immediateSearch();
                 }}
-                className="p-2 rounded-md hover:bg-slate-100"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4 text-slate-400" />
-              </button>
-            ) : null}
-            
+              />
+              {searchQuery ? (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setDebouncedQuery("");
+                  }}
+                  className="p-2 rounded-md hover:bg-slate-100"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4 text-slate-400" />
+                </button>
+              ) : null}
+            </div>
           </div>
-          </div>
-          
 
           {/* Content grid / results */}
           {loading ? (
@@ -417,15 +414,17 @@ export default function ExplorePage() {
         </section>
 
         {/** RIGHT SECTION */}
-        <aside className="border bg-gray-700 border-gray-400 p-4 rounded-2xl h-auto lg:col-span-3 relative">
+        <aside className="h-auto lg:col-span-3 relative">
           <div className="lg:sticky lg:top-32 space-y-4">
-            <Image
-              src={"/folder/fun-break.png"}
-              alt="Fun Break"
-              width={200}
-              height={200}
-              className="object-cover border border-gray-300 bg-yellow-100 h-full w-full rounded-xl shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer"
-            />
+            <Link href="/fun-break">
+              <Image
+                src={"/folder/fun-break.png"}
+                alt="Fun Break"
+                width={100}
+                height={100}
+                className="object-cover border border-gray-300 bg-yellow-100 h-full w-full rounded-xl shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer"
+              />
+            </Link>
             <Image
               src={"/folder/interactive-games.png"}
               alt="Fun Break"

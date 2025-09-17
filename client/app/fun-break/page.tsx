@@ -5,6 +5,7 @@ import Link from "next/link";
 import React from "react";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
+import Footer from "@/components/footer";
 
 const FunBreakPage = () => {
   const { user } = useAuthStore();
@@ -54,9 +55,9 @@ const FunBreakPage = () => {
         <div className="grid grid-cols-2 gap-6">
           {[
             { src: "/folder/riddle-cover.png", href: "riddles" },
-            { src: "/folder/puzzles-cover.png", href: "" },
-            { src: "/folder/jokes-cover.png", href: "" },
-            { src: "/folder/tongue-twisters-cover.png", href: "" },
+            { src: "/folder/puzzles-cover.png", href: "puzzles" },
+            { src: "/folder/jokes-cover.png", href: "jokes" },
+            { src: "/folder/tongue-twisters-cover.png", href: "tongue-twisters" },
           ].map((card, idx) => (
             <motion.div
               key={idx}
